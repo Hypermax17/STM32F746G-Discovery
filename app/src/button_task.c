@@ -1,13 +1,15 @@
 #include "button_task.h"
 #include "app.h"
 #include "bsp.h"
+#include "qspi_test.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
 
-#define BUTTON_STACK_WORDS 512
+#define BUTTON_STACK_WORDS 1024
 #define BUTTON_PRIORITY    2
 #define LONG_PRESS_MS      1000U
+#define TEST_PRESS_MS      3000U      /* >= 3 s: QSPI-Schreibtest */
 
 static void button_task(void *arg)
 {
@@ -24,7 +26,10 @@ static void button_task(void *arg)
             BSP_LOGI("Taste: gedrueckt");
         } else {
             uint32_t held = ev.tick_ms - pressed_at;
-            if (held >= LONG_PRESS_MS) {
+            if (held >= TEST_PRESS_MS) {
+                BSP_LOGI("Taste: %lu ms -> QSPI-Test", (unsigned long)held);
+                qspi_write_test();
+            } else if (held >= LONG_PRESS_MS) {
                 BSP_LOGI("Taste: lang (%lu ms)", (unsigned long)held);
             } else {
                 BSP_LOGI("Taste: kurz (%lu ms)", (unsigned long)held);

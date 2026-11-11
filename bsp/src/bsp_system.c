@@ -40,6 +40,22 @@ static void mpu_config(void)
     n.IsBufferable     = MPU_ACCESS_NOT_BUFFERABLE;
     HAL_MPU_ConfigRegion(&n);
 
+    /* QSPI-Bereich: gesperrt, bis bsp_qspi das Memory-Mapping aktiviert (verhindert
+     * spekulative Zugriffe des Cortex-M7 auf den abgeschalteten QUADSPI). */
+    MPU_Region_InitTypeDef q = {0};
+    q.Enable           = MPU_REGION_ENABLE;
+    q.Number           = MPU_REGION_NUMBER2;
+    q.BaseAddress      = 0x90000000UL;
+    q.Size             = MPU_REGION_SIZE_16MB;
+    q.SubRegionDisable = 0x00;
+    q.TypeExtField     = MPU_TEX_LEVEL0;
+    q.AccessPermission = MPU_REGION_NO_ACCESS;
+    q.DisableExec      = MPU_INSTRUCTION_ACCESS_DISABLE;
+    q.IsShareable      = MPU_ACCESS_NOT_SHAREABLE;
+    q.IsCacheable      = MPU_ACCESS_NOT_CACHEABLE;
+    q.IsBufferable     = MPU_ACCESS_NOT_BUFFERABLE;
+    HAL_MPU_ConfigRegion(&q);
+
     HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 }
 

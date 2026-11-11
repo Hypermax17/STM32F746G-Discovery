@@ -15,7 +15,7 @@ target_compile_definitions(cmsis INTERFACE STM32F746xx)
 set(HAL_DIR ${TP}/stm32f7xx_hal_driver)
 set(HAL_MODULES
     hal hal_cortex hal_dma hal_dma_ex hal_flash hal_flash_ex hal_gpio hal_i2c
-    hal_i2c_ex hal_ltdc hal_ltdc_ex hal_pwr hal_pwr_ex hal_rcc hal_rcc_ex
+    hal_i2c_ex hal_ltdc hal_ltdc_ex hal_pwr hal_pwr_ex hal_qspi hal_rcc hal_rcc_ex
     hal_sdram ll_fmc)
 set(HAL_SOURCES "")
 foreach(m ${HAL_MODULES})
