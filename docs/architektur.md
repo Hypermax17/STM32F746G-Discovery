@@ -47,6 +47,7 @@ Wird spaeter Audio (SAI) ergaenzt, muss die PLLSAI-Konfiguration beide Verbrauch
 | Funktion | Pins |
 |---|---|
 | LED LD1 | PI1 |
+| User-Taster B1 | PI11 (aktiv high, EXTI15_10) |
 | LCD | LTDC-Datenleitungen auf PE4, PG12, PI9/10/14/15, PJ0..11/13..15, PK0..2/4..7; DISP = PI12; Backlight = PK3 |
 | I2C3 (Touch, Audio-Codec) | PH7 = SCL, PH8 = SDA (AF4, Open-Drain); Touch-Interrupt PI13 (noch ungenutzt) |
 | SDRAM (FMC) | PC3, PD0/1/8/9/10/14/15, PE0/1/7..15, PF0..5/11..15, PG0/1/4/5/8/15, PH3/5 |
@@ -84,3 +85,12 @@ FT5336 (7-Bit `0x38`) und spaeter dem Audio-Codec WM8994 (7-Bit `0x1A`).
 
 Die App (`touch_task.c`) loggt Beruehrungen mit Display- und Rohkoordinaten ("Touch(n) x,y raw rx,ry")
 und zeigt die aktuelle Position rechts in der Statuszeile.
+
+## User-Taster und LED
+
+`bsp_button`: Flanken an PI11 loesen EXTI15_10 aus (Prioritaet 6, FreeRTOS-API erlaubt). Die ISR entprellt
+(20 ms, Pegelwechsel gegenueber dem zuletzt akzeptierten Zustand) und legt `PRESSED`/`RELEASED`-Ereignisse mit
+Zeitstempel in eine Queue; Tasks lesen sie mit `bsp_button_get_event()`.
+
+App: `button_task` loggt kurze und lange Druecke (>= 1 s). Ein kurzer Druck wechselt das Blinktempo von LD1
+(500 ms <-> 100 ms), das der `heartbeat_task` ausfuehrt.

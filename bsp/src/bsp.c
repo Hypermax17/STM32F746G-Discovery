@@ -60,4 +60,10 @@ void bsp_init(void)
     } else {
         BSP_LOGI("Touch: FT5336 OK (ID %02X)", (unsigned)touch_id);
     }
+
+    if (bsp_button_init() != 0) {
+        BSP_LOGE("Taster: Init fehlgeschlagen");
+    } else {
+        BSP_LOGI("Taster B1 bereit");
+    }
 }
