@@ -12,6 +12,17 @@ Das Board wird ueber den integrierten ST-LINK (USB-Buchse CN14 "USB ST-LINK") ge
 
 Nach dem Programmieren startet die Applikation: das Display zeigt das Boot-Banner, LED LD1 (gruen) blinkt.
 
+## Wo bekomme ich die Binaries?
+
+Die Binaries werden nicht eingecheckt, sondern gebaut:
+
+- **GitHub Actions:** Repository -> Reiter *Actions* -> Lauf des gewuenschten Commits -> unten *Artifacts*.
+  - `stm32f746g-release` / `stm32f746g-debug`: normale Applikation
+  - `stm32f746g-faulttest-<art>`: Varianten, die 3 s nach dem Start einen Fehler ausloesen
+    (`nullptr`, `div0`, `undef`, `execsdram`, `stackoverflow`, `assert`, `malloc`)
+  - Jedes Artefakt ist ein ZIP mit `.bin`, `.hex` und `.elf`.
+- **Lokal:** siehe README (`build/release/app/`).
+
 ## Fehlersuche ohne Display: LED-Blinkcodes
 
 Falls das Display nicht startet, blinkt LD1 in Gruppen (Pause dazwischen):
