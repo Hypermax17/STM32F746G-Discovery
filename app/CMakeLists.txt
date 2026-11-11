@@ -8,6 +8,7 @@ add_executable(app
     src/fault_test.c
     src/app_status.c
     src/touch_task.c
+    src/button_task.c
     $<TARGET_OBJECTS:stm32_startup>)
 
 set_target_properties(app PROPERTIES OUTPUT_NAME stm32f746g_app SUFFIX .elf)

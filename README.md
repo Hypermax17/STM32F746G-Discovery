@@ -38,7 +38,7 @@ Siehe [docs/flashen.md](docs/flashen.md).
 - [x] Schritt 1: SDRAM, LCD, Debug-Konsole auf dem Display
 - [x] Schritt 2: Fehlerbehandlung (Hard-Fault etc.) auf dem Display
 - [x] Schritt 3: Touchscreen
-- [ ] Schritt 4: User-Button, LED
+- [x] Schritt 4: User-Button, LED
 - [ ] Schritt 5: QSPI-Flash
 - [ ] Schritt 6: Audio
 - [ ] Schritt 7: Geruest fuer SD, USB OTG, Ethernet, Kamera

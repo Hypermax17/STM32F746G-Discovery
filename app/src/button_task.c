@@ -1,0 +1,42 @@
+#include "button_task.h"
+#include "app.h"
+#include "bsp.h"
+
+#include "FreeRTOS.h"
+#include "task.h"
+
+#define BUTTON_STACK_WORDS 512
+#define BUTTON_PRIORITY    2
+#define LONG_PRESS_MS      1000U
+
+static void button_task(void *arg)
+{
+    (void)arg;
+    uint32_t pressed_at = 0;
+
+    for (;;) {
+        bsp_button_event_t ev;
+        if (bsp_button_get_event(&ev, UINT32_MAX) != 0) {
+            continue;
+        }
+        if (ev.type == BSP_BUTTON_PRESSED) {
+            pressed_at = ev.tick_ms;
+            BSP_LOGI("Taste: gedrueckt");
+        } else {
+            uint32_t held = ev.tick_ms - pressed_at;
+            if (held >= LONG_PRESS_MS) {
+                BSP_LOGI("Taste: lang (%lu ms)", (unsigned long)held);
+            } else {
+                BSP_LOGI("Taste: kurz (%lu ms)", (unsigned long)held);
+                app_heartbeat_toggle_rate();
+            }
+        }
+    }
+}
+
+void button_task_start(void)
+{
+    if (xTaskCreate(button_task, "button", BUTTON_STACK_WORDS, NULL, BUTTON_PRIORITY, NULL) != pdPASS) {
+        bsp_panic("Task 'button' nicht erzeugt");
+    }
+}
