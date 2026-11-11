@@ -102,6 +102,21 @@ void bsp_console_write(const char *text, uint16_t color)
     }
 }
 
+static void status_draw(const char *text)
+{
+    for (uint32_t i = 0; i < COLS; i++) {
+        char c = (*text != '\0') ? *text++ : ' ';
+        draw_char(i, ROWS - 1U, c, BSP_COLOR_BLACK, BSP_COLOR_GRAY);
+    }
+}
+
+void bsp_console_status_unlocked(const char *text)
+{
+    if (s_ready) {
+        status_draw(text);
+    }
+}
+
 void bsp_console_status(const char *text)
 {
     if (!s_ready) {
@@ -109,14 +124,21 @@ void bsp_console_status(const char *text)
     }
     if (locking_possible()) {
         xSemaphoreTake(s_mutex, portMAX_DELAY);
-    }
-    for (uint32_t i = 0; i < COLS; i++) {
-        char c = (*text != '\0') ? *text++ : ' ';
-        draw_char(i, ROWS - 1U, c, BSP_COLOR_BLACK, BSP_COLOR_GRAY);
-    }
-    if (locking_possible()) {
+        status_draw(text);
         xSemaphoreGive(s_mutex);
+    } else {
+        status_draw(text);
     }
+}
+
+void bsp_console_clear_unlocked(void)
+{
+    if (!s_ready) {
+        return;
+    }
+    bsp_lcd_fill_rect(0, 0, BSP_LCD_WIDTH, LOG_ROWS * CELL_H, COLOR_BG);
+    s_col = 0;
+    s_row = 0;
 }
 
 int bsp_console_init(void)

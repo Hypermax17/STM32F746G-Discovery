@@ -5,6 +5,7 @@ add_executable(app
     src/main.c
     src/app.c
     src/app_hooks.c
+    src/fault_test.c
     $<TARGET_OBJECTS:stm32_startup>)
 
 set_target_properties(app PROPERTIES OUTPUT_NAME stm32f746g_app SUFFIX .elf)
@@ -12,6 +13,17 @@ set_target_properties(app PROPERTIES OUTPUT_NAME stm32f746g_app SUFFIX .elf)
 target_include_directories(app PRIVATE src)
 target_compile_definitions(app PRIVATE APP_VERSION="${APP_VERSION}")
 target_compile_options(app PRIVATE -Wall -Wextra)
+
+# Optional: Fehler provozieren, um die Fehleranzeige zu testen
+#   -DAPP_FAULT_TEST=nullptr|div0|undef|execsdram|stackoverflow|assert|malloc
+set(APP_FAULT_TEST "" CACHE STRING "Testfehler 3 s nach dem Start ausloesen (leer = aus)")
+if(APP_FAULT_TEST)
+    string(TOUPPER "${APP_FAULT_TEST}" _ft)
+    target_compile_definitions(app PRIVATE
+        APP_FAULT_TEST_ENABLED=1
+        APP_FAULT_TEST_${_ft}=1
+        APP_FAULT_TEST_NAME="${APP_FAULT_TEST}")
+endif()
 target_link_libraries(app PRIVATE bsp stm32_hal freertos)
 target_link_options(app PRIVATE
     -T${LINKER_SCRIPT}

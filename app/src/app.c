@@ -1,4 +1,5 @@
 #include "app.h"
+#include "fault_test.h"
 #include "bsp.h"
 
 #include <stdio.h>
@@ -46,5 +47,6 @@ void app_init(void)
                     HEARTBEAT_PRIORITY, NULL) != pdPASS) {
         bsp_panic("Task 'heartbeat' nicht erzeugt");
     }
+    fault_test_start();
     BSP_LOGI("Tasks gestartet");
 }

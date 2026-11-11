@@ -23,3 +23,4 @@ Falls das Display nicht startet, blinkt LD1 in Gruppen (Pause dazwischen):
 | 4x | SDRAM-Test fehlgeschlagen |
 | 5x | LCD-/Konsolen-Init fehlgeschlagen |
 | 6x | Panic (Meldung steht auf dem Display, falls es laeuft) |
+| 7x | CPU-Fault (Details stehen auf dem Display, falls es laeuft) |
