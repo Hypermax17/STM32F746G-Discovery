@@ -19,11 +19,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi cmake ninja-build
 
-      # Baut die normale Applikation und alle Fehlertest-Varianten (je Release)
-      - name: Alle Programmvarianten bauen
+      # Baut die Applikation (Release) nach dist/
+      - name: Applikation bauen
         run: scripts/build_variants.sh
 
-      # Ein einziges Artefakt, das nur die .hex-Dateien aller Varianten enthaelt
+      # Ein einziges Artefakt, das nur die .hex-Datei enthaelt
       - name: Artefakt hochladen
         uses: actions/upload-artifact@v4
         with:

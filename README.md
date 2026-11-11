@@ -26,7 +26,7 @@ cmake --build --preset release
 
 Ergebnis in `build/release/app/`: `stm32f746g_app.bin`, `.hex`, `.elf`, `.map`.
 Liegt der Compiler nicht im `PATH`, die Umgebungsvariable `ARM_TOOLCHAIN_PATH` auf das `bin`-Verzeichnis setzen.
-Bei jedem Push baut GitHub Actions (`.github/workflows/build.yml`) alle Programmvarianten (`scripts/build_variants.sh`) und stellt sie als **ein** Artefakt `stm32f746g-hex` mit den `.hex`-Dateien bereit.
+Bei jedem Push baut GitHub Actions (`.github/workflows/build.yml`) die Applikation (`scripts/build_variants.sh`) und stellt sie als **ein** Artefakt `stm32f746g-hex` mit der `.hex`-Datei bereit.
 
 ## Flashen (STM32CubeProgrammer)
 
@@ -37,7 +37,7 @@ Siehe [docs/flashen.md](docs/flashen.md).
 - [x] Schritt 0: Projektgeruest, Pipeline, FreeRTOS, Takt 216 MHz
 - [x] Schritt 1: SDRAM, LCD, Debug-Konsole auf dem Display
 - [x] Schritt 2: Fehlerbehandlung (Hard-Fault etc.) auf dem Display
-- [ ] Schritt 3: Touchscreen
+- [x] Schritt 3: Touchscreen
 - [ ] Schritt 4: User-Button, LED
 - [ ] Schritt 5: QSPI-Flash
 - [ ] Schritt 6: Audio

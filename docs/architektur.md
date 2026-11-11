@@ -48,6 +48,7 @@ Wird spaeter Audio (SAI) ergaenzt, muss die PLLSAI-Konfiguration beide Verbrauch
 |---|---|
 | LED LD1 | PI1 |
 | LCD | LTDC-Datenleitungen auf PE4, PG12, PI9/10/14/15, PJ0..11/13..15, PK0..2/4..7; DISP = PI12; Backlight = PK3 |
+| I2C3 (Touch, Audio-Codec) | PH7 = SCL, PH8 = SDA (AF4, Open-Drain); Touch-Interrupt PI13 (noch ungenutzt) |
 | SDRAM (FMC) | PC3, PD0/1/8/9/10/14/15, PE0/1/7..15, PF0..5/11..15, PG0/1/4/5/8/15, PH3/5 |
 
 ## Fehlerbehandlung (`bsp_fault.c`)
@@ -71,3 +72,15 @@ cmake --build --preset release
 
 Arten: `nullptr`, `div0`, `undef`, `execsdram`, `stackoverflow`, `assert`, `malloc`.
 Zurueck zum Normalbetrieb: `cmake --preset release -DAPP_FAULT_TEST=` und neu bauen.
+Die CI baut diese Varianten nicht; lokal: `FAULT_TESTS="nullptr div0" scripts/build_variants.sh`.
+
+## I2C3 und Touchscreen
+
+`bsp_i2c` (I2C3, 100 kHz, Kerntakt SYSCLK, Mutex) ist der gemeinsame Bus von Touch-Controller
+FT5336 (7-Bit `0x38`) und spaeter dem Audio-Codec WM8994 (7-Bit `0x1A`).
+`bsp_touch` liest per Polling (20 ms) bis zu 5 Beruehrungspunkte und bildet sie auf Display-Koordinaten
+(0..479 / 0..271) ab. Die Ausrichtung ist ueber `BSP_TOUCH_DEFAULT_SWAP_XY/INVERT_X/INVERT_Y`
+(`bsp_touch.h`) bzw. `bsp_touch_set_orientation()` einstellbar.
+
+Die App (`touch_task.c`) loggt Beruehrungen mit Display- und Rohkoordinaten ("Touch(n) x,y raw rx,ry")
+und zeigt die aktuelle Position rechts in der Statuszeile.

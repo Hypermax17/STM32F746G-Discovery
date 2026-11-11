@@ -15,15 +15,12 @@ Nach dem Programmieren startet die Applikation: das Display zeigt das Boot-Banne
 ## Wo bekomme ich die Binaries?
 
 GitHub: Repository -> Reiter *Actions* -> Lauf des gewuenschten Commits -> unten *Artifacts* ->
-**`stm32f746g-hex`** (ein ZIP). Darin liegt je Programmvariante eine `.hex`-Datei:
-
-| Datei | Programm |
-|---|---|
-| `stm32f746g_normal.hex` | normale Applikation |
-| `stm32f746g_faulttest_<art>.hex` | loest 3 s nach dem Start einen Fehler aus (`nullptr`, `div0`, `undef`, `execsdram`, `stackoverflow`, `assert`, `malloc`) |
+**`stm32f746g-hex`** (ein ZIP mit `stm32f746g_normal.hex`).
 
 `.hex` enthaelt die Startadresse, im CubeProgrammer muss daher keine Adresse eingetragen werden.
-Lokal erzeugt `scripts/build_variants.sh` dieselben Dateien im Ordner `dist/`.
+Lokal erzeugt `scripts/build_variants.sh` dieselbe Datei im Ordner `dist/`.
+Fehlertest-Varianten (siehe `docs/architektur.md`) baust du bei Bedarf lokal:
+`FAULT_TESTS="nullptr div0" scripts/build_variants.sh`.
 
 ## Fehlersuche ohne Display: LED-Blinkcodes
 
