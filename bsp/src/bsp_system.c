@@ -24,13 +24,34 @@ static void mpu_config(void)
     r.IsBufferable     = MPU_ACCESS_NOT_BUFFERABLE;
     HAL_MPU_ConfigRegion(&r);
 
+    /* Null-Zeiger-Falle: die ersten 32 Bytes (Adresse 0) sind nicht zugreifbar ->
+     * MemManage-Fault statt stillschweigend ITCM zu lesen/schreiben. */
+    MPU_Region_InitTypeDef n = {0};
+    n.Enable           = MPU_REGION_ENABLE;
+    n.Number           = MPU_REGION_NUMBER1;
+    n.BaseAddress      = 0x00000000UL;
+    n.Size             = MPU_REGION_SIZE_32B;
+    n.SubRegionDisable = 0x00;
+    n.TypeExtField     = MPU_TEX_LEVEL0;
+    n.AccessPermission = MPU_REGION_NO_ACCESS;
+    n.DisableExec      = MPU_INSTRUCTION_ACCESS_DISABLE;
+    n.IsShareable      = MPU_ACCESS_NOT_SHAREABLE;
+    n.IsCacheable      = MPU_ACCESS_NOT_CACHEABLE;
+    n.IsBufferable     = MPU_ACCESS_NOT_BUFFERABLE;
+    HAL_MPU_ConfigRegion(&n);
+
     HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 }
 
 void bsp_system_init_early(void)
 {
     HAL_Init();
+    SCB->VTOR = FLASH_BASE;          /* Vektortabelle explizit im Flash (nicht ueber den Alias bei 0x0) */
     mpu_config();
+
+    /* Eigene Fault-Handler (bsp_fault.c) statt HardFault-Eskalation; Division durch 0 trappen */
+    SCB->SHCSR |= SCB_SHCSR_USGFAULTENA_Msk | SCB_SHCSR_BUSFAULTENA_Msk | SCB_SHCSR_MEMFAULTENA_Msk;
+    SCB->CCR   |= SCB_CCR_DIV_0_TRP_Msk;
     SCB_EnableICache();
     SCB_EnableDCache();
 }

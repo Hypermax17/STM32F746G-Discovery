@@ -36,7 +36,7 @@ Siehe [docs/flashen.md](docs/flashen.md).
 
 - [x] Schritt 0: Projektgeruest, Pipeline, FreeRTOS, Takt 216 MHz
 - [x] Schritt 1: SDRAM, LCD, Debug-Konsole auf dem Display
-- [ ] Schritt 2: Fehlerbehandlung (Hard-Fault etc.) auf dem Display
+- [x] Schritt 2: Fehlerbehandlung (Hard-Fault etc.) auf dem Display
 - [ ] Schritt 3: Touchscreen
 - [ ] Schritt 4: User-Button, LED
 - [ ] Schritt 5: QSPI-Flash

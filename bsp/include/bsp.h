@@ -11,6 +11,7 @@
 #include "bsp_lcd.h"
 #include "bsp_console.h"
 #include "bsp_log.h"
+#include "bsp_fault.h"
 
 void bsp_init(void);
 

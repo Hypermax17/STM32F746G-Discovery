@@ -49,3 +49,25 @@ Wird spaeter Audio (SAI) ergaenzt, muss die PLLSAI-Konfiguration beide Verbrauch
 | LED LD1 | PI1 |
 | LCD | LTDC-Datenleitungen auf PE4, PG12, PI9/10/14/15, PJ0..11/13..15, PK0..2/4..7; DISP = PI12; Backlight = PK3 |
 | SDRAM (FMC) | PC3, PD0/1/8/9/10/14/15, PE0/1/7..15, PF0..5/11..15, PG0/1/4/5/8/15, PH3/5 |
+
+## Fehlerbehandlung (`bsp_fault.c`)
+
+NMI, HardFault, MemManage, BusFault und UsageFault loeschen den Logbereich und zeigen:
+Fault-Art, Task, PC/LR/PSR/SP, R0-R3/R12, CFSR/HFSR/MMFAR/BFAR und die dekodierte Ursache.
+Danach blinkt LD1 7x; neu starten mit dem Reset-Taster. Der Handler nutzt kein printf.
+
+Aktiv sind ausserdem: Division-durch-0-Trap, eine MPU-Falle auf Adresse 0..31 (Null-Zeiger),
+keine Code-Ausfuehrung im SDRAM, FreeRTOS-Stack-Ueberlauf-Pruefung (Methode 2), Heap-Fehler-Hook und `configASSERT`
+(Ausgabe per `bsp_panic()`).
+
+### Fehlerdarstellung testen
+
+Mit einem Konfigurations-Schalter loest die App 3 s nach dem Start gezielt einen Fehler aus:
+
+```bash
+cmake --preset release -DAPP_FAULT_TEST=nullptr
+cmake --build --preset release
+```
+
+Arten: `nullptr`, `div0`, `undef`, `execsdram`, `stackoverflow`, `assert`, `malloc`.
+Zurueck zum Normalbetrieb: `cmake --preset release -DAPP_FAULT_TEST=` und neu bauen.

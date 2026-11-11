@@ -25,4 +25,8 @@ void bsp_console_status(const char *text);
  * fuer Fehlerbehandlung (Panic, Fault-Handler). */
 void bsp_console_write_unlocked(const char *text, uint16_t color);
 
+/* Ohne Sperre (fuer Fehlerbehandlung): Statuszeile setzen bzw. Logbereich loeschen. */
+void bsp_console_status_unlocked(const char *text);
+void bsp_console_clear_unlocked(void);
+
 #endif
