@@ -50,4 +50,14 @@ void bsp_init(void)
     BSP_LOGI("SDRAM: %lu KB, Test OK (%lu ms)", (unsigned long)(BSP_SDRAM_SIZE / 1024UL),
              (unsigned long)sdram_ms);
     log_reset_cause();
+
+    /* Touch (nicht kritisch: ohne Touch laeuft die Applikation weiter) */
+    uint8_t touch_id = 0;
+    if (bsp_i2c3_init() != 0) {
+        BSP_LOGE("I2C3: Init fehlgeschlagen");
+    } else if (bsp_touch_init(&touch_id) != 0) {
+        BSP_LOGW("Touch: FT5336 nicht gefunden (ID %02X)", (unsigned)touch_id);
+    } else {
+        BSP_LOGI("Touch: FT5336 OK (ID %02X)", (unsigned)touch_id);
+    }
 }

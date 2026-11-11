@@ -1,5 +1,7 @@
 #include "app.h"
 #include "fault_test.h"
+#include "app_status.h"
+#include "touch_task.h"
 #include "bsp.h"
 
 #include <stdio.h>
@@ -14,22 +16,18 @@
 #define HEARTBEAT_STACK_WORDS 512
 #define HEARTBEAT_PRIORITY    1
 
-/* Heartbeat: LED LD1 blinkt (500 ms), die Statuszeile zeigt Laufzeit und Speicher. */
+/* Heartbeat: LED LD1 blinkt (500 ms), die Statuszeile zeigt Laufzeit und freien Heap. */
 static void heartbeat_task(void *arg)
 {
     (void)arg;
-    char status[BSP_CONSOLE_COLS + 1U];
     TickType_t last = xTaskGetTickCount();
     unsigned beat = 0;
 
     for (;;) {
         bsp_led_toggle();
         if ((++beat & 1U) == 0U) {
-            unsigned long s = xTaskGetTickCount() / configTICK_RATE_HZ;
-            snprintf(status, sizeof status, "up %lus  heap %luK frei  tasks %u",
-                     s, (unsigned long)(xPortGetFreeHeapSize() / 1024U),
-                     (unsigned)uxTaskGetNumberOfTasks());
-            bsp_console_status(status);
+            app_status_set_system(xTaskGetTickCount() / configTICK_RATE_HZ,
+                                  (uint32_t)(xPortGetFreeHeapSize() / 1024U));
         }
         vTaskDelayUntil(&last, pdMS_TO_TICKS(500));
     }
@@ -43,10 +41,12 @@ void app_init(void)
     BSP_LOGI("FreeRTOS %s", tskKERNEL_VERSION_NUMBER);
     BSP_LOGI("Heap: %lu KB", (unsigned long)(xPortGetFreeHeapSize() / 1024U));
 
+    app_status_init();
     if (xTaskCreate(heartbeat_task, "heartbeat", HEARTBEAT_STACK_WORDS, NULL,
                     HEARTBEAT_PRIORITY, NULL) != pdPASS) {
         bsp_panic("Task 'heartbeat' nicht erzeugt");
     }
+    touch_task_start();
     fault_test_start();
     BSP_LOGI("Tasks gestartet");
 }
