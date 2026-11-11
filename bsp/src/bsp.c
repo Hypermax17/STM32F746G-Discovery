@@ -66,4 +66,32 @@ void bsp_init(void)
     } else {
         BSP_LOGI("Taster B1 bereit");
     }
+
+    /* QSPI-Flash (nicht kritisch): ID lesen, Memory-Mapped-Modus einschalten und gegen den
+     * indirekten Zugriff pruefen (Inhalt bleibt unveraendert). */
+    bsp_qspi_id_t qid;
+    int qrc = bsp_qspi_init(&qid);
+    if (qrc != 0) {
+        BSP_LOGW("QSPI: nicht erkannt (%d) ID %02X %02X %02X", qrc, (unsigned)qid.manufacturer,
+                 (unsigned)qid.type, (unsigned)qid.capacity);
+    } else {
+        uint8_t ref[64];
+        int rd = bsp_qspi_read(0, ref, sizeof ref);
+        if (rd == 0 && bsp_qspi_memory_mapped_enable() == 0) {
+            const volatile uint8_t *map = (const volatile uint8_t *)BSP_QSPI_BASE;
+            int same = 1;
+            for (unsigned i = 0; i < sizeof ref; i++) {
+                if (map[i] != ref[i]) { same = 0; break; }
+            }
+            BSP_LOGI("QSPI: %lu MB ID %02X %02X %02X", (unsigned long)(BSP_QSPI_SIZE >> 20),
+                     (unsigned)qid.manufacturer, (unsigned)qid.type, (unsigned)qid.capacity);
+            if (same) {
+                BSP_LOGI("QSPI: Mapping 0x%08lX ok", (unsigned long)BSP_QSPI_BASE);
+            } else {
+                BSP_LOGE("QSPI: Mapping liefert andere Daten!");
+            }
+        } else {
+            BSP_LOGE("QSPI: Lesen/Mapping fehlgeschlagen (%d)", rd);
+        }
+    }
 }

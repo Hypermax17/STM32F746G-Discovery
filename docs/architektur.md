@@ -19,6 +19,7 @@ Schlaegt ein Schritt vor der Konsole fehl, zeigt LD1 einen Blinkcode.
 | Flash | `0x08000000`, 1 MB | Programm |
 | DTCM | `0x20000000`, 64 KB | Main-Stack (MSP) |
 | SRAM1+2 | `0x20010000`, 256 KB | `.data`/`.bss`, FreeRTOS-Heap (96 KB) |
+| QSPI-Flash | `0x90000000`, 16 MB | Memory-Mapped (nur lesbar), per MPU gesperrt solange das Mapping aus ist |
 | SDRAM | `0xC0000000`, 8 MB | `0xC0000000`: Framebuffer (RGB565, 255 KB, 512 KB reserviert); ab `0xC0080000` frei (`.sdram`) |
 
 Hinweis: Der SDRAM-Chip hat 128 Mbit (16 MB), ist am STM32F746 aber nur mit 16 Datenleitungen angebunden, daher sind **8 MB** nutzbar.
@@ -49,6 +50,7 @@ Wird spaeter Audio (SAI) ergaenzt, muss die PLLSAI-Konfiguration beide Verbrauch
 | LED LD1 | PI1 |
 | User-Taster B1 | PI11 (aktiv high, EXTI15_10) |
 | LCD | LTDC-Datenleitungen auf PE4, PG12, PI9/10/14/15, PJ0..11/13..15, PK0..2/4..7; DISP = PI12; Backlight = PK3 |
+| QSPI-Flash (QUADSPI) | PB2 = CLK (AF9), PB6 = NCS (AF10), PD11 = IO0, PD12 = IO1, PE2 = IO2, PD13 = IO3 (AF9) |
 | I2C3 (Touch, Audio-Codec) | PH7 = SCL, PH8 = SDA (AF4, Open-Drain); Touch-Interrupt PI13 (noch ungenutzt) |
 | SDRAM (FMC) | PC3, PD0/1/8/9/10/14/15, PE0/1/7..15, PF0..5/11..15, PG0/1/4/5/8/15, PH3/5 |
 
@@ -94,3 +96,25 @@ Zeitstempel in eine Queue; Tasks lesen sie mit `bsp_button_get_event()`.
 
 App: `button_task` loggt kurze und lange Druecke (>= 1 s). Ein kurzer Druck wechselt das Blinktempo von LD1
 (500 ms <-> 100 ms), das der `heartbeat_task` ausfuehrt.
+
+## QSPI-Flash
+
+`bsp_qspi`: Micron MT25QL128 (16 MB, JEDEC-ID `20 BA 18`) am QUADSPI, 108 MHz, Standard-SPI-Protokoll,
+Lesen per *Quad Output Fast Read* (`0x6B`, 8 Dummy-Takte), Schreiben per Page Program (`0x02`, 256 B),
+Loeschen 4 KB (`0x20`) bzw. 64 KB (`0xD8`). Beim Init wird der Chip zurueckgesetzt (auch aus dem QPI-Modus,
+falls ein ST-Demo ihn dort gelassen hat), die ID geprueft und das **Memory-Mapping** ab `0x90000000` eingeschaltet.
+
+- Indirekt: `bsp_qspi_read/write/erase_subsector/erase_sector` (Adresse = Offset). Schreiben/Loeschen schalten das
+  Mapping kurz ab und danach wieder an; Bereiche muessen vorher geloescht (0xFF) sein. Alles Thread-sicher.
+- Memory-mapped: Der Flash ist ab `BSP_QSPI_BASE` wie RAM lesbar (Cache: write-through, nur lesen).
+- MPU-Region 2 sperrt `0x90000000..0x90FFFFFF`, solange das Mapping aus ist. Grund: Der Cortex-M7 darf nicht
+  spekulativ auf den abgeschalteten QUADSPI zugreifen (Bus-Haenger).
+
+Beim Boot wird nichts geschrieben oder geloescht. Das Log zeigt `QSPI: 16 MB ID 20 BA 18` und
+`QSPI: Mapping 0x90000000 ok` (64 Bytes werden indirekt und per Mapping verglichen).
+
+### Schreibtest (Taster)
+
+Ein Tastendruck von **>= 3 s** startet `qspi_write_test()`: Es wird von hinten ein komplett leerer 4-KB-Sektor
+gesucht (vorhandene Daten, z. B. vom ST-Demo, bleiben unangetastet), ein Muster programmiert, indirekt und per
+Mapping geprueft und der Sektor wieder geloescht. Das Log zeigt Zeiten und Fehleranzahl.

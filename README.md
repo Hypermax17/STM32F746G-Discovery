@@ -39,7 +39,7 @@ Siehe [docs/flashen.md](docs/flashen.md).
 - [x] Schritt 2: Fehlerbehandlung (Hard-Fault etc.) auf dem Display
 - [x] Schritt 3: Touchscreen
 - [x] Schritt 4: User-Button, LED
-- [ ] Schritt 5: QSPI-Flash
+- [x] Schritt 5: QSPI-Flash
 - [ ] Schritt 6: Audio
 - [ ] Schritt 7: Geruest fuer SD, USB OTG, Ethernet, Kamera
 - [ ] Schritt 8: Basisapplikation
