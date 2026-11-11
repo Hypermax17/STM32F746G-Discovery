@@ -8,9 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        preset: [release, debug]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,50 +19,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi cmake ninja-build
 
-      - name: Konfigurieren
-        run: cmake --preset ${{ matrix.preset }}
+      # Baut die normale Applikation und alle Fehlertest-Varianten (je Release)
+      - name: Alle Programmvarianten bauen
+        run: scripts/build_variants.sh
 
-      - name: Bauen
-        run: cmake --build --preset ${{ matrix.preset }}
-
-      - name: Binaries als Artefakt hochladen
+      # Ein einziges Artefakt, das nur die .hex-Dateien aller Varianten enthaelt
+      - name: Artefakt hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: stm32f746g-${{ matrix.preset }}
-          path: |
-            build/${{ matrix.preset }}/app/stm32f746g_app.bin
-            build/${{ matrix.preset }}/app/stm32f746g_app.hex
-            build/${{ matrix.preset }}/app/stm32f746g_app.elf
-            build/${{ matrix.preset }}/app/stm32f746g_app.map
-
-  # Varianten, die gezielt einen Fehler ausloesen (zum Testen der Fehleranzeige auf dem Display)
-  fault-tests:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        test: [nullptr, div0, undef, execsdram, stackoverflow, assert, malloc]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Toolchain installieren
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi cmake ninja-build
-
-      - name: Konfigurieren und bauen
-        run: |
-          cmake --preset release -DAPP_FAULT_TEST=${{ matrix.test }}
-          cmake --build --preset release
-
-      - name: Binaries als Artefakt hochladen
-        uses: actions/upload-artifact@v4
-        with:
-          name: stm32f746g-faulttest-${{ matrix.test }}
-          path: |
-            build/release/app/stm32f746g_app.bin
-            build/release/app/stm32f746g_app.hex
-            build/release/app/stm32f746g_app.elf
+          name: stm32f746g-hex
+          path: dist/*.hex
+          if-no-files-found: error

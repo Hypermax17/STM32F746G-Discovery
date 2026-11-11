@@ -5,8 +5,8 @@ Das Board wird ueber den integrierten ST-LINK (USB-Buchse CN14 "USB ST-LINK") ge
 1. Board per USB mit dem PC verbinden (Buchse **CN14**, ST-LINK).
 2. STM32CubeProgrammer starten, rechts oben **ST-LINK** waehlen, **Mode: Normal**, **Port: SWD** und **Connect**.
 3. Reiter **Erasing & Programming** (Symbol "Download"):
-   - **File path:** `stm32f746g_app.bin`, `.hex` oder `.elf` (aus `build/release/app/` oder dem CI-Artefakt)
-   - **Start address:** `0x08000000` (nur bei `.bin` noetig; `.hex`/`.elf` enthalten die Adresse)
+   - **File path:** eine `.hex`-Datei aus dem CI-Artefakt `stm32f746g-hex` (lokal: `dist/` bzw. `build/release/app/`)
+   - **Start address:** nicht noetig bei `.hex` (bei einer `.bin` waere es `0x08000000`)
    - Haken bei **Verify programming** und **Run after programming**
 4. **Start Programming**.
 
@@ -14,14 +14,16 @@ Nach dem Programmieren startet die Applikation: das Display zeigt das Boot-Banne
 
 ## Wo bekomme ich die Binaries?
 
-Die Binaries werden nicht eingecheckt, sondern gebaut:
+GitHub: Repository -> Reiter *Actions* -> Lauf des gewuenschten Commits -> unten *Artifacts* ->
+**`stm32f746g-hex`** (ein ZIP). Darin liegt je Programmvariante eine `.hex`-Datei:
 
-- **GitHub Actions:** Repository -> Reiter *Actions* -> Lauf des gewuenschten Commits -> unten *Artifacts*.
-  - `stm32f746g-release` / `stm32f746g-debug`: normale Applikation
-  - `stm32f746g-faulttest-<art>`: Varianten, die 3 s nach dem Start einen Fehler ausloesen
-    (`nullptr`, `div0`, `undef`, `execsdram`, `stackoverflow`, `assert`, `malloc`)
-  - Jedes Artefakt ist ein ZIP mit `.bin`, `.hex` und `.elf`.
-- **Lokal:** siehe README (`build/release/app/`).
+| Datei | Programm |
+|---|---|
+| `stm32f746g_normal.hex` | normale Applikation |
+| `stm32f746g_faulttest_<art>.hex` | loest 3 s nach dem Start einen Fehler aus (`nullptr`, `div0`, `undef`, `execsdram`, `stackoverflow`, `assert`, `malloc`) |
+
+`.hex` enthaelt die Startadresse, im CubeProgrammer muss daher keine Adresse eingetragen werden.
+Lokal erzeugt `scripts/build_variants.sh` dieselben Dateien im Ordner `dist/`.
 
 ## Fehlersuche ohne Display: LED-Blinkcodes
 

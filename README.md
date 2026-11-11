@@ -26,7 +26,7 @@ cmake --build --preset release
 
 Ergebnis in `build/release/app/`: `stm32f746g_app.bin`, `.hex`, `.elf`, `.map`.
 Liegt der Compiler nicht im `PATH`, die Umgebungsvariable `ARM_TOOLCHAIN_PATH` auf das `bin`-Verzeichnis setzen.
-Bei jedem Push baut GitHub Actions (`.github/workflows/build.yml`) beide Presets und stellt die Binaries als Artefakt bereit.
+Bei jedem Push baut GitHub Actions (`.github/workflows/build.yml`) alle Programmvarianten (`scripts/build_variants.sh`) und stellt sie als **ein** Artefakt `stm32f746g-hex` mit den `.hex`-Dateien bereit.
 
 ## Flashen (STM32CubeProgrammer)
 
