@@ -38,7 +38,7 @@ Antippen der Seitenleiste oder ein kurzer Druck auf den User-Taster (B1) wechsel
 | Seite | Inhalt |
 |---|---|
 | **System** | Cockpit-Anzeige: runde Anzeigen fuer CPU-Last, CPU-Temperatur und VDDA, Peripherie-Status, aktivste Tasks, Test-Ton |
-| **Messwerte** | drei Cockpit-Anzeigen (MCU-Temperatur, Luftfeuchte, Umgebungstemperatur), Live-Diagramm und Live-Tabelle, Pause/Loeschen |
+| **Messwerte** | vier Cockpit-Kacheln (zwei Temperaturen, zwei Luftfeuchten) mit Mini-Diagramm des Verlaufs |
 | **Log** | Systemmeldungen (Boot-Meldungen, Warnungen, Fehler) |
 
 Weitere Tasterfunktionen: 1..3 s halten = Audio-Diagnose im Log, >= 3 s = QSPI-Schreibtest.

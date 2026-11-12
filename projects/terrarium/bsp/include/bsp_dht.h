@@ -3,15 +3,21 @@
 
 #include "bsp_dht_core.h"
 
-/* Projekt Terrarium: Temperatur-/Feuchtesensor DHT11 (optional DHT22) an einem Pin des Arduino-Anschlusses.
+/* Projekt Terrarium: zwei Temperatur-/Feuchtesensoren DHT11 (optional DHT22) am Arduino-Anschluss.
+ * Der DHT11 hat keine Adresse, daher hat jeder Sensor einen eigenen Datenpin:
  *
- *   Datenleitung:  Arduino-Anschluss D4  =  PG7   (3,3 V und GND vom selben Anschluss)
+ *   Sensor 1:  Datenleitung an Arduino D4 = PG7
+ *   Sensor 2:  Datenleitung an Arduino D2 = PG6
+ *   (3,3 V und GND vom selben Anschluss, beide Sensoren koennen sich Versorgung und Masse teilen)
  *
  * Die Messwerte kommen fertig in Grad Celsius und Prozent relativer Luftfeuchte. Der Treiber ist Thread-sicher
- * und haelt den Mindestabstand von 1,1 s zwischen zwei Messungen selbst ein (kann daher bis zu ~1 s blockieren).
- * Waehrend des ca. 4 ms langen Telegramms sind Interrupts mit FreeRTOS-Prioritaet (>= 5) gesperrt.
+ * (die Sensoren werden nacheinander gelesen) und haelt den Mindestabstand von 1,1 s zwischen zwei Messungen
+ * desselben Sensors selbst ein (kann daher bis zu ~1 s blockieren). Waehrend des ca. 4 ms langen Telegramms sind
+ * Interrupts mit FreeRTOS-Prioritaet (>= 5) gesperrt.
  *
- * Sensortyp: -DBSP_DHT_TYPE=22 fuer DHT22/AM2302, Standard ist DHT11. */
+ * Sensortyp: -DBSP_DHT_TYPE=22 fuer DHT22/AM2302 (beide Sensoren gleichen Typs), Standard ist DHT11. */
+
+#define BSP_DHT_COUNT 2U
 
 #ifndef BSP_DHT_TYPE
 #define BSP_DHT_TYPE 11
@@ -29,12 +35,15 @@
 #define BSP_DHT_NAME       "DHT11"
 #endif
 
-/* Rueckgabe 0 = Pin eingerichtet (sagt nichts darueber, ob ein Sensor angeschlossen ist) */
+/* Richtet die Datenpins aller Sensoren ein. Rueckgabe 0 = ok (sagt nichts darueber, ob Sensoren angeschlossen sind) */
 int bsp_dht_init(void);
 
-/* Misst Temperatur und Luftfeuchte. Rueckgabe DHT_OK (0) oder ein DHT_ERR_*-Wert; *temp_c und *hum_pct
- * nur bei Erfolg gesetzt. */
-int bsp_dht_read(float *temp_c, float *hum_pct);
+/* Bezeichnung des Anschlusses von Sensor idx (0 oder 1), z. B. "D4" */
+const char *bsp_dht_pin_name(unsigned idx);
+
+/* Misst Temperatur und Luftfeuchte von Sensor idx. Rueckgabe DHT_OK (0) oder ein DHT_ERR_*-Wert;
+ * *temp_c und *hum_pct nur bei Erfolg gesetzt. */
+int bsp_dht_read(unsigned idx, float *temp_c, float *hum_pct);
 
 /* Fehlertext zu einem Rueckgabewert */
 const char *bsp_dht_error_text(int rc);

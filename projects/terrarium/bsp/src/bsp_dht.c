@@ -5,21 +5,31 @@
 #include "semphr.h"
 #include "task.h"
 
-#define DHT_PORT GPIOG
-#define DHT_PIN  GPIO_PIN_7                 /* Arduino D4 */
-
 #define START_LOW_MS      22U               /* Startsignal: mindestens 18 ms Low */
-#define MIN_INTERVAL_MS   1100U             /* Abstand zwischen zwei Messungen */
+#define MIN_INTERVAL_MS   1100U             /* Abstand zwischen zwei Messungen desselben Sensors */
 
 void bsp_runtime_counter_init(void);        /* bsp_system.c: schaltet den DWT-Zyklenzaehler ein */
 
+typedef struct {
+    GPIO_TypeDef *port;
+    uint16_t      pin;
+    const char   *name;                     /* Arduino-Bezeichnung */
+    uint32_t      last_ms;                  /* Zeitpunkt der letzten Messung */
+} dht_sensor_t;
+
+/* Datenpins (Arduino-Anschluss): Sensor 1 = D4 (PG7), Sensor 2 = D2 (PG6) */
+static dht_sensor_t s_sensor[BSP_DHT_COUNT] = {
+    { GPIOG, GPIO_PIN_7, "D4", 0 },
+    { GPIOG, GPIO_PIN_6, "D2", 0 },
+};
+
 static SemaphoreHandle_t s_mutex;
-static uint32_t s_last_ms;
 static int s_ready;
 
-static int io_pin(void)
+static int io_pin(void *ctx)
 {
-    return (DHT_PORT->IDR & DHT_PIN) != 0U;
+    const dht_sensor_t *s = ctx;
+    return (s->port->IDR & s->pin) != 0U;
 }
 
 static uint32_t io_cycles(void)
@@ -45,49 +55,55 @@ int bsp_dht_init(void)
     bsp_runtime_counter_init();
 
     __HAL_RCC_GPIOG_CLK_ENABLE();
-    /* Open-Drain mit Pull-up: Schreiben von 0 zieht die Leitung nach Masse, 1 laesst sie los;
-     * Lesen der Eingangsdaten funktioniert auch im Open-Drain-Betrieb. */
-    GPIO_InitTypeDef g = {0};
-    g.Pin   = DHT_PIN;
-    g.Mode  = GPIO_MODE_OUTPUT_OD;
-    g.Pull  = GPIO_PULLUP;
-    g.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(DHT_PORT, &g);
-    HAL_GPIO_WritePin(DHT_PORT, DHT_PIN, GPIO_PIN_SET);
-
+    for (unsigned i = 0; i < BSP_DHT_COUNT; i++) {
+        /* Open-Drain mit Pull-up: Schreiben von 0 zieht die Leitung nach Masse, 1 laesst sie los;
+         * Lesen der Eingangsdaten funktioniert auch im Open-Drain-Betrieb. */
+        GPIO_InitTypeDef g = {0};
+        g.Pin   = s_sensor[i].pin;
+        g.Mode  = GPIO_MODE_OUTPUT_OD;
+        g.Pull  = GPIO_PULLUP;
+        g.Speed = GPIO_SPEED_FREQ_HIGH;
+        HAL_GPIO_Init(s_sensor[i].port, &g);
+        HAL_GPIO_WritePin(s_sensor[i].port, s_sensor[i].pin, GPIO_PIN_SET);
+        s_sensor[i].last_ms = HAL_GetTick() - MIN_INTERVAL_MS;   /* erste Messung sofort moeglich */
+    }
     s_ready = 1;
-    s_last_ms = HAL_GetTick() - MIN_INTERVAL_MS;   /* erste Messung sofort moeglich (Sensor ist beim Start bereit) */
     return 0;
 }
 
-int bsp_dht_read(float *temp_c, float *hum_pct)
+const char *bsp_dht_pin_name(unsigned idx)
 {
-    if (!s_ready) {
+    return (idx < BSP_DHT_COUNT) ? s_sensor[idx].name : "?";
+}
+
+int bsp_dht_read(unsigned idx, float *temp_c, float *hum_pct)
+{
+    if (!s_ready || idx >= BSP_DHT_COUNT) {
         return DHT_ERR_NO_RESPONSE;
     }
+    dht_sensor_t *sn = &s_sensor[idx];
     const int sched = (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING);
     if (sched) {
         xSemaphoreTake(s_mutex, portMAX_DELAY);
     }
 
-    const uint32_t since = HAL_GetTick() - s_last_ms;
+    const uint32_t since = HAL_GetTick() - sn->last_ms;
     if (since < MIN_INTERVAL_MS) {
         delay_ms(MIN_INTERVAL_MS - since);
     }
 
     /* Startsignal: Leitung nach Masse */
-    DHT_PORT->BSRR = (uint32_t)DHT_PIN << 16;
+    sn->port->BSRR = (uint32_t)sn->pin << 16;
     delay_ms(START_LOW_MS);
 
     /* Loslassen und Telegramm erfassen; Interrupts mit FreeRTOS-Prioritaet duerfen die Messung nicht stoeren */
-    const dht_io_t io = { io_pin, io_cycles, SystemCoreClock / 1000000U };
-
+    const dht_io_t io = { io_pin, io_cycles, SystemCoreClock / 1000000U, sn };
     uint8_t bytes[5];
     taskENTER_CRITICAL();
-    DHT_PORT->BSRR = DHT_PIN;
+    sn->port->BSRR = sn->pin;
     int rc = dht_capture(&io, bytes);
     taskEXIT_CRITICAL();
-    s_last_ms = HAL_GetTick();
+    sn->last_ms = HAL_GetTick();
 
     if (rc == DHT_OK) {
         float t = 0.0f, h = 0.0f;
