@@ -27,6 +27,13 @@ Hinweis: Der SDRAM-Chip hat 128 Mbit (16 MB), ist am STM32F746 aber nur mit 16 D
 Der SDRAM-Bereich ist per MPU als *Normal, cachebar, write-through* konfiguriert (`bsp_system.c`),
 damit der LTDC (DMA) immer aktuelle Daten liest und unaligned Zugriffe erlaubt sind.
 
+## FPU
+
+Der STM32F746 hat eine **Single-Precision**-FPU (`-mfpu=fpv5-sp-d16`). Berechnungen mit `float` laufen in Hardware,
+`double` wird per Software emuliert (langsam). Mit `-mfpu=fpv5-d16` kaeme es zu einem UsageFault
+"Undefinierter Befehl" bei der ersten Double-Operation (so geschehen in `sinf()` des Audio-Tasks).
+Im Code daher `float` und `sinf/cosf` statt `double` verwenden.
+
 ## Takte
 
 HSE 25 MHz -> PLL -> SYSCLK/HCLK 216 MHz, APB1 54 MHz, APB2 108 MHz (Over-Drive, Flash 7 WS).
