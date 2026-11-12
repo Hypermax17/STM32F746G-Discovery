@@ -17,6 +17,11 @@
 #include "bsp_button.h"
 #include "bsp_qspi.h"
 #include "bsp_audio.h"
+#include "bsp_common.h"
+#include "bsp_sd.h"
+#include "bsp_usb.h"
+#include "bsp_eth.h"
+#include "bsp_camera.h"
 
 void bsp_init(void);
 

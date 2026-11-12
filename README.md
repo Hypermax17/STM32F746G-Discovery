@@ -12,7 +12,7 @@ FreeRTOS, Build mit CMake + `arm-none-eabi-gcc`. Debug-Ausgaben erscheinen auf d
 | `third_party/` | Git-Submodule: STM32F7-HAL, CMSIS-Core/-Device, FreeRTOS-Kernel |
 | `linker/` | Linker-Script (Flash, DTCM, SRAM, SDRAM) |
 | `cmake/` | Toolchain-Datei |
-| `docs/` | Doku (Speicherkarte, Pinbelegung, Flashen) |
+| `docs/` | Doku (Architektur, Flashen, optionale Module) |
 
 ## Bauen
 
@@ -41,5 +41,5 @@ Siehe [docs/flashen.md](docs/flashen.md).
 - [x] Schritt 4: User-Button, LED
 - [x] Schritt 5: QSPI-Flash
 - [x] Schritt 6: Audio
-- [ ] Schritt 7: Geruest fuer SD, USB OTG, Ethernet, Kamera
+- [x] Schritt 7: Geruest fuer SD, USB OTG, Ethernet, Kamera (`docs/optionale-module.md`)
 - [ ] Schritt 8: Basisapplikation
