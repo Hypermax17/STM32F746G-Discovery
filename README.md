@@ -40,7 +40,7 @@ auf den User-Taster (B1) blaettert zur naechsten Seite.
 | **Messwerte** | Live-Diagramm und Live-Tabelle von CPU-Temperatur (Grad Celsius) und VDDA (Volt), Pause/Loeschen |
 | **Log** | Systemmeldungen (Boot-Meldungen, Warnungen, Fehler) |
 
-Die Schaltflaeche **"Design X"** baut die aktuelle Seite mit dem naechsten Design neu auf (A dunkel, B hell, C Terminal).
+Die Schaltflaeche **"Design X"** baut die aktuelle Seite mit dem naechsten Design neu auf (A Dashboard dunkel, B Cockpit gruen, C Glas violett).
 Weitere Tasterfunktionen: 1..3 s halten = Audio-Diagnose im Log, >= 3 s = QSPI-Schreibtest.
 
 ## Flashen (STM32CubeProgrammer)

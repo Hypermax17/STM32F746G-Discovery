@@ -13,6 +13,7 @@ typedef enum {
     UI_TEXT_SMALL_DIM,
     UI_TEXT_BIG,       /* grosser Messwert */
     UI_TEXT_TITLE,     /* Ueberschrift */
+    UI_TEXT_HERO,      /* sehr grosse Zahl (Cockpit) */
     UI_TEXT_ACCENT,
     UI_TEXT_WARN,
     UI_TEXT_OK,
@@ -40,6 +41,16 @@ lv_obj_t *ui_dot(lv_obj_t *parent, int32_t x, int32_t y, int32_t dia, uint32_t r
 lv_obj_t *ui_table(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y,
                    uint32_t rows, uint32_t cols, const int32_t *col_widths);
 int32_t   ui_table_row_h(const ui_design_t *d);
+/* Runde Anzeige (270-Grad-Bogen) mit Zahl in der Mitte und Titel darunter */
+typedef struct {
+    lv_obj_t *arc;
+    lv_obj_t *value;
+    lv_obj_t *title;
+} ui_gauge_t;
+ui_gauge_t ui_gauge(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y, int32_t size,
+                    const char *title, int32_t min, int32_t max, uint32_t rgb);
+void ui_gauge_set(const ui_gauge_t *g, int32_t value, const char *text);
+
 lv_obj_t *ui_chart(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y, int32_t w, int32_t h,
                    uint32_t points);
 

@@ -6,6 +6,9 @@
 #define SCREEN_W 480
 #define SCREEN_H 272
 
+#define TOP_BAR_H   32
+#define SIDE_RAIL_W 76
+
 /* ---- Hilfen ------------------------------------------------------------------ */
 
 static void plain(lv_obj_t *o)
@@ -25,6 +28,7 @@ void ui_label_set_kind_color(lv_obj_t *label, const ui_design_t *d, ui_text_kind
     case UI_TEXT_SMALL_DIM: f = d->font_small; c = d->text_dim; break;
     case UI_TEXT_BIG:       f = d->font_big; break;
     case UI_TEXT_TITLE:     f = d->font_title; break;
+    case UI_TEXT_HERO:      f = d->font_hero; break;
     case UI_TEXT_ACCENT:    c = d->accent; break;
     case UI_TEXT_WARN:      c = d->warn; break;
     case UI_TEXT_OK:        c = d->ok; break;
@@ -41,10 +45,17 @@ lv_obj_t *ui_card(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y, 
     lv_obj_set_pos(o, x, y);
     lv_obj_set_size(o, w, h);
     lv_obj_set_style_bg_color(o, ui_col(d->panel), 0);
-    lv_obj_set_style_bg_opa(o, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_opa(o, d->panel_opa, 0);
     lv_obj_set_style_radius(o, d->radius, 0);
     lv_obj_set_style_border_width(o, d->border_w, 0);
     lv_obj_set_style_border_color(o, ui_col(d->border), 0);
+    lv_obj_set_style_border_opa(o, d->border_opa, 0);
+    if (d->shadow_w > 0U) {
+        lv_obj_set_style_shadow_width(o, d->shadow_w, 0);
+        lv_obj_set_style_shadow_offset_y(o, 4, 0);
+        lv_obj_set_style_shadow_color(o, lv_color_black(), 0);
+        lv_obj_set_style_shadow_opa(o, LV_OPA_40, 0);
+    }
     return o;
 }
 
@@ -79,13 +90,16 @@ lv_obj_t *ui_button(lv_obj_t *parent, const ui_design_t *d, const char *text,
     lv_obj_set_style_radius(b, d->radius, 0);
     lv_obj_set_style_border_width(b, d->border_w, 0);
     lv_obj_set_style_border_color(b, ui_col(d->border), 0);
+    lv_obj_set_style_border_opa(b, d->border_opa, 0);
     lv_obj_set_style_bg_color(b, ui_col(d->panel), 0);
-    lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_opa(b, d->panel_opa, 0);
     lv_obj_set_style_text_color(b, ui_col(d->text), 0);
     lv_obj_set_style_text_font(b, d->font, 0);
     /* gedrueckt: Akzentflaeche */
     lv_obj_set_style_bg_color(b, ui_col(d->accent), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(b, LV_OPA_COVER, LV_STATE_PRESSED);
     lv_obj_set_style_border_color(b, ui_col(d->accent), LV_STATE_PRESSED);
+    lv_obj_set_style_border_opa(b, LV_OPA_COVER, LV_STATE_PRESSED);
     lv_obj_set_style_text_color(b, ui_col(d->accent_text), LV_STATE_PRESSED);
 
     lv_obj_t *l = lv_label_create(b);
@@ -94,7 +108,7 @@ lv_obj_t *ui_button(lv_obj_t *parent, const ui_design_t *d, const char *text,
     return b;
 }
 
-/* ---- Tabelle / Diagramm ----------------------------------------------------- */
+/* ---- Tabelle / Diagramm / Rundanzeige --------------------------------------- */
 
 int32_t ui_table_row_h(const ui_design_t *d)
 {
@@ -120,6 +134,7 @@ lv_obj_t *ui_table(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y,
     lv_obj_set_style_border_width(t, 1, LV_PART_ITEMS);
     lv_obj_set_style_border_side(t, LV_BORDER_SIDE_BOTTOM, LV_PART_ITEMS);
     lv_obj_set_style_border_color(t, ui_col(d->border), LV_PART_ITEMS);
+    lv_obj_set_style_border_opa(t, (lv_opa_t)(d->border_opa / 2U), LV_PART_ITEMS);
     return t;
 }
 
@@ -135,10 +150,46 @@ lv_obj_t *ui_chart(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y,
     lv_chart_set_div_line_count(c, 4, 6);
     lv_obj_set_style_bg_opa(c, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_line_color(c, ui_col(d->border), LV_PART_MAIN);       /* Gitterlinien */
+    lv_obj_set_style_line_opa(c, (lv_opa_t)(d->border_opa / 2U + 20U), LV_PART_MAIN);
     lv_obj_set_style_line_width(c, 1, LV_PART_MAIN);
     lv_obj_set_style_line_width(c, 2, LV_PART_ITEMS);                      /* Kurven */
     lv_obj_set_style_size(c, 0, 0, LV_PART_INDICATOR);                     /* keine Punktmarken */
     return c;
+}
+
+ui_gauge_t ui_gauge(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y, int32_t size,
+                    const char *title, int32_t min, int32_t max, uint32_t rgb)
+{
+    ui_gauge_t g;
+    g.arc = lv_arc_create(parent);
+    lv_obj_remove_style_all(g.arc);                     /* ohne Theme: kein Knopf, keine Standardfarben */
+    lv_obj_remove_flag(g.arc, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_pos(g.arc, x, y);
+    lv_obj_set_size(g.arc, size, size);
+    lv_arc_set_rotation(g.arc, 135);
+    lv_arc_set_bg_angles(g.arc, 0, 270);
+    lv_arc_set_range(g.arc, min, max);
+    lv_arc_set_value(g.arc, min);
+    const int32_t aw = size / 9;
+    lv_obj_set_style_arc_width(g.arc, aw, LV_PART_MAIN);
+    lv_obj_set_style_arc_color(g.arc, ui_col(d->border), LV_PART_MAIN);
+    lv_obj_set_style_arc_rounded(g.arc, true, LV_PART_MAIN);
+    lv_obj_set_style_arc_width(g.arc, aw, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(g.arc, ui_col(rgb), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_rounded(g.arc, true, LV_PART_INDICATOR);
+
+    g.value = ui_label(g.arc, d, UI_TEXT_BIG, "-");
+    lv_obj_align(g.value, LV_ALIGN_CENTER, 0, -4);
+    g.title = ui_label(g.arc, d, UI_TEXT_SMALL_DIM, title);
+    lv_obj_align(g.title, LV_ALIGN_BOTTOM_MID, 0, 2);
+    return g;
+}
+
+void ui_gauge_set(const ui_gauge_t *g, int32_t value, const char *text)
+{
+    lv_arc_set_value(g->arc, value);
+    lv_label_set_text(g->value, text);
+    lv_obj_align(g->value, LV_ALIGN_CENTER, 0, -4);
 }
 
 /* ---- Navigation ----------------------------------------------------------------- */
@@ -155,12 +206,12 @@ static void nav_click_cb(lv_event_t *e)
     }
 }
 
-static void style_nav_button(lv_obj_t *b, const ui_design_t *d, int active, int flat)
+static void style_nav_button(lv_obj_t *b, const ui_design_t *d, int active)
 {
     if (active) {
         lv_obj_set_style_bg_color(b, ui_col(d->accent), 0);
-        lv_obj_set_style_bg_opa(b, flat ? LV_OPA_TRANSP : LV_OPA_COVER, 0);
-        lv_obj_set_style_text_color(b, ui_col(flat ? d->accent : d->accent_text), 0);
+        lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+        lv_obj_set_style_text_color(b, ui_col(d->accent_text), 0);
     } else {
         lv_obj_set_style_bg_opa(b, LV_OPA_TRANSP, 0);
         lv_obj_set_style_text_color(b, ui_col(d->text_dim), 0);
@@ -172,33 +223,50 @@ static void style_nav_button(lv_obj_t *b, const ui_design_t *d, int active, int 
 }
 
 static lv_obj_t *nav_button(lv_obj_t *parent, const ui_design_t *d, const char *text,
-                            int32_t x, int32_t y, int32_t w, int32_t h, uintptr_t id, int active, int flat)
+                            int32_t x, int32_t y, int32_t w, int32_t h, uintptr_t id, int active)
 {
     lv_obj_t *b = ui_button(parent, d, text, x, y, w, h);
-    style_nav_button(b, d, active, flat);
+    style_nav_button(b, d, active);
     lv_obj_add_event_cb(b, nav_click_cb, LV_EVENT_CLICKED, (void *)id);
     return b;
 }
 
-static lv_obj_t *bar(lv_obj_t *scr, const ui_design_t *d, int32_t y, int32_t h)
+/* Seitenleiste: Symbol (gross) und Name (klein) uebereinander */
+static void rail_button(lv_obj_t *parent, const ui_design_t *d, const char *icon, const char *name,
+                        int32_t y, int32_t h, uintptr_t id, int active)
+{
+    lv_obj_t *b = nav_button(parent, d, "", 4, y, SIDE_RAIL_W - 8, h, id, active);
+    lv_obj_t *old = lv_obj_get_child(b, 0);
+    lv_obj_delete(old);
+    lv_obj_t *i = lv_label_create(b);
+    lv_label_set_text(i, icon);
+    lv_obj_set_style_text_font(i, d->font_title, 0);
+    lv_obj_align(i, LV_ALIGN_TOP_MID, 0, 7);
+    lv_obj_t *n = lv_label_create(b);
+    lv_label_set_text(n, name);
+    lv_obj_set_style_text_font(n, d->font_small, 0);
+    lv_obj_align(n, LV_ALIGN_BOTTOM_MID, 0, -5);
+}
+
+static lv_obj_t *bar(lv_obj_t *scr, const ui_design_t *d, int32_t x, int32_t y, int32_t w, int32_t h)
 {
     lv_obj_t *b = lv_obj_create(scr);
     plain(b);
-    lv_obj_set_pos(b, 0, y);
-    lv_obj_set_size(b, SCREEN_W, h);
+    lv_obj_set_pos(b, x, y);
+    lv_obj_set_size(b, w, h);
     lv_obj_set_style_bg_color(b, ui_col(d->nav_bg), 0);
-    lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_opa(b, d->bg_gradient ? LV_OPA_70 : LV_OPA_COVER, 0);
     return b;
 }
 
-static void line(lv_obj_t *scr, const ui_design_t *d, int32_t y)
+static void line(lv_obj_t *scr, const ui_design_t *d, int32_t x, int32_t y, int32_t w, int32_t h)
 {
     lv_obj_t *l = lv_obj_create(scr);
     plain(l);
-    lv_obj_set_pos(l, 0, y);
-    lv_obj_set_size(l, SCREEN_W, 1);
+    lv_obj_set_pos(l, x, y);
+    lv_obj_set_size(l, w, h);
     lv_obj_set_style_bg_color(l, ui_col(d->border), 0);
-    lv_obj_set_style_bg_opa(l, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_opa(l, d->border_opa, 0);
 }
 
 ui_frame_t ui_frame_create(const ui_design_t *d, unsigned page_idx)
@@ -208,76 +276,45 @@ ui_frame_t ui_frame_create(const ui_design_t *d, unsigned page_idx)
     plain(f.screen);
     lv_obj_set_style_bg_color(f.screen, ui_col(d->bg), 0);
     lv_obj_set_style_bg_opa(f.screen, LV_OPA_COVER, 0);
+    if (d->bg_gradient) {
+        lv_obj_set_style_bg_grad_color(f.screen, ui_col(d->bg2), 0);
+        lv_obj_set_style_bg_grad_dir(f.screen, LV_GRAD_DIR_VER, 0);
+    }
 
     const unsigned n = ui_pages_count();
-    int32_t cy = 0;
+    int32_t cx = 0, cy = 0;
     char buf[24];
 
-    switch (d->nav) {
-    case UI_NAV_TOP: {
-        const int32_t bh = 32;
-        lv_obj_t *b = bar(f.screen, d, 0, bh);
+    if (d->nav == UI_NAV_TOP) {
+        lv_obj_t *b = bar(f.screen, d, 0, 0, SCREEN_W, TOP_BAR_H);
         for (unsigned i = 0; i < n; i++) {
-            nav_button(b, d, ui_pages_name(i), 8 + (int32_t)i * 104, 4, 100, 24, i, i == page_idx, 0);
+            nav_button(b, d, ui_pages_name(i), 8 + (int32_t)i * 104, 4, 100, 24, i, i == page_idx);
         }
         lv_snprintf(buf, sizeof buf, "Design %c", d->letter);
-        nav_button(b, d, buf, SCREEN_W - 8 - 84, 4, 84, 24, NAV_DESIGN_BASE + page_idx, 0, 0);
-        line(f.screen, d, bh - 1);
-        cy = bh;
-        f.h = SCREEN_H - bh;
-        break;
-    }
-    case UI_NAV_BOTTOM: {
-        const int32_t bh = 40;
-        const int32_t y0 = SCREEN_H - bh;
-        lv_obj_t *b = bar(f.screen, d, y0, bh);
-        const int32_t bw = SCREEN_W / (int32_t)(n + 1U);
+        nav_button(b, d, buf, SCREEN_W - 8 - 84, 4, 84, 24, NAV_DESIGN_BASE + page_idx, 0);
+        line(f.screen, d, 0, TOP_BAR_H - 1, SCREEN_W, 1);
+        cy = TOP_BAR_H;
+        f.w = SCREEN_W;
+        f.h = SCREEN_H - TOP_BAR_H;
+    } else {
+        lv_obj_t *b = bar(f.screen, d, 0, 0, SIDE_RAIL_W, SCREEN_H);
+        const int32_t item_h = 58;
         for (unsigned i = 0; i < n; i++) {
-            lv_obj_t *nb = nav_button(b, d, ui_pages_name(i), (int32_t)i * bw, 0, bw, bh, i, i == page_idx, 1);
-            if (i == page_idx) {                          /* Akzentstrich oben */
-                lv_obj_t *s = lv_obj_create(b);
-                plain(s);
-                lv_obj_set_pos(s, (int32_t)i * bw + 12, 0);
-                lv_obj_set_size(s, bw - 24, 3);
-                lv_obj_set_style_bg_color(s, ui_col(d->accent), 0);
-                lv_obj_set_style_bg_opa(s, LV_OPA_COVER, 0);
-                (void)nb;
-            }
+            rail_button(b, d, ui_pages_icon(i), ui_pages_name(i), 6 + (int32_t)i * (item_h + 4), item_h, i, i == page_idx);
         }
         lv_snprintf(buf, sizeof buf, "Design %c", d->letter);
-        nav_button(b, d, buf, (int32_t)n * bw, 0, SCREEN_W - (int32_t)n * bw, bh, NAV_DESIGN_BASE + page_idx, 0, 1);
-        line(f.screen, d, y0);
-        cy = 0;
-        f.h = SCREEN_H - bh;
-        break;
-    }
-    case UI_NAV_TEXT:
-    default: {
-        const int32_t bh = 24;
-        const int32_t y0 = SCREEN_H - bh;
-        lv_obj_t *b = bar(f.screen, d, y0, bh);
-        int32_t x = 4;
-        for (unsigned i = 0; i < n; i++) {
-            lv_snprintf(buf, sizeof buf, "[%u] %s", i + 1U, ui_pages_name(i));
-            lv_point_t sz;
-            lv_text_get_size(&sz, buf, d->font, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
-            const int32_t w = sz.x + 16;
-            nav_button(b, d, buf, x, 0, w, bh, i, i == page_idx, 0);
-            x += w + 4;
-        }
-        lv_snprintf(buf, sizeof buf, "[D] %c", d->letter);
-        nav_button(b, d, buf, SCREEN_W - 84, 0, 80, bh, NAV_DESIGN_BASE + page_idx, 0, 0);
-        line(f.screen, d, y0);
-        cy = 0;
-        f.h = SCREEN_H - bh;
-        break;
-    }
+        lv_obj_t *db = nav_button(b, d, buf, 4, SCREEN_H - 6 - 34, SIDE_RAIL_W - 8, 34, NAV_DESIGN_BASE + page_idx, 0);
+        lv_obj_set_style_text_font(db, d->font_small, 0);
+        lv_obj_set_style_border_width(db, d->border_w, 0);
+        line(f.screen, d, SIDE_RAIL_W - 1, 0, 1, SCREEN_H);
+        cx = SIDE_RAIL_W;
+        f.w = SCREEN_W - SIDE_RAIL_W;
+        f.h = SCREEN_H;
     }
 
-    f.w = SCREEN_W;
     f.content = lv_obj_create(f.screen);
     plain(f.content);
-    lv_obj_set_pos(f.content, 0, cy);
+    lv_obj_set_pos(f.content, cx, cy);
     lv_obj_set_size(f.content, f.w, f.h);
     return f;
 }

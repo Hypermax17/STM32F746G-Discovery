@@ -104,9 +104,9 @@ int main(void)
     lv_display_set_flush_cb(disp, flush_cb);
 
     static const ui_page_def_t pages[] = {
-        { "System", page_system_create, page_system_update },
-        { "Messwerte", page_values_create, page_values_update },
-        { "Log", page_log_create, page_log_update },
+        { "System", LV_SYMBOL_SETTINGS, page_system_create, page_system_update },
+        { "Messwerte", LV_SYMBOL_CHARGE, page_values_create, page_values_update },
+        { "Log", LV_SYMBOL_LIST, page_log_create, page_log_update },
     };
     static const char *const page_name[] = { "system", "messwerte", "log" };
     static const char design_letter[] = { 'A', 'B', 'C' };
