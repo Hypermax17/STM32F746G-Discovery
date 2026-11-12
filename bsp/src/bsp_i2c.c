@@ -109,6 +109,36 @@ int bsp_i2c3_mem_write(uint8_t addr7, uint8_t reg, const uint8_t *buf, uint16_t 
     return (st == HAL_OK) ? 0 : -1;
 }
 
+int bsp_i2c3_reg16_read(uint8_t addr7, uint16_t reg, uint16_t *value)
+{
+    uint8_t d[2] = {0, 0};
+    lock();
+    HAL_StatusTypeDef st = HAL_I2C_Mem_Read(&hi2c3, (uint16_t)(addr7 << 1), reg,
+                                            I2C_MEMADD_SIZE_16BIT, d, 2, I2C3_TIMEOUT);
+    if (st != HAL_OK) {
+        recover();
+    }
+    unlock();
+    if (st != HAL_OK) {
+        return -1;
+    }
+    *value = (uint16_t)((d[0] << 8) | d[1]);
+    return 0;
+}
+
+int bsp_i2c3_reg16_write(uint8_t addr7, uint16_t reg, uint16_t value)
+{
+    uint8_t d[2] = {(uint8_t)(value >> 8), (uint8_t)(value & 0xFFU)};
+    lock();
+    HAL_StatusTypeDef st = HAL_I2C_Mem_Write(&hi2c3, (uint16_t)(addr7 << 1), reg,
+                                             I2C_MEMADD_SIZE_16BIT, d, 2, I2C3_TIMEOUT);
+    if (st != HAL_OK) {
+        recover();
+    }
+    unlock();
+    return (st == HAL_OK) ? 0 : -1;
+}
+
 int bsp_i2c3_probe(uint8_t addr7)
 {
     lock();

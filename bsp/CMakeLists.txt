@@ -13,7 +13,8 @@ add_library(bsp OBJECT
     src/bsp_i2c.c
     src/bsp_touch.c
     src/bsp_button.c
-    src/bsp_qspi.c)
+    src/bsp_qspi.c
+    src/bsp_audio.c)
 
 target_include_directories(bsp PUBLIC include)
 target_link_libraries(bsp PUBLIC stm32_hal freertos)

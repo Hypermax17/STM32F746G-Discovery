@@ -3,6 +3,7 @@
 #include "app_status.h"
 #include "touch_task.h"
 #include "button_task.h"
+#include "audio_task.h"
 #include "bsp.h"
 
 #include <stdio.h>
@@ -60,6 +61,7 @@ void app_init(void)
                     HEARTBEAT_PRIORITY, NULL) != pdPASS) {
         bsp_panic("Task 'heartbeat' nicht erzeugt");
     }
+    audio_task_start();
     button_task_start();
     touch_task_start();
     fault_test_start();

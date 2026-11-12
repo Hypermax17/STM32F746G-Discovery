@@ -10,6 +10,7 @@ add_executable(app
     src/touch_task.c
     src/button_task.c
     src/qspi_test.c
+    src/audio_task.c
     $<TARGET_OBJECTS:stm32_startup>)
 
 set_target_properties(app PROPERTIES OUTPUT_NAME stm32f746g_app SUFFIX .elf)
@@ -28,7 +29,7 @@ if(APP_FAULT_TEST)
         APP_FAULT_TEST_${_ft}=1
         APP_FAULT_TEST_NAME="${APP_FAULT_TEST}")
 endif()
-target_link_libraries(app PRIVATE bsp stm32_hal freertos)
+target_link_libraries(app PRIVATE bsp stm32_hal freertos m)
 target_link_options(app PRIVATE
     -T${LINKER_SCRIPT}
     -Wl,-Map=$<TARGET_FILE_DIR:app>/stm32f746g_app.map

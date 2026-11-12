@@ -31,7 +31,7 @@ damit der LTDC (DMA) immer aktuelle Daten liest und unaligned Zugriffe erlaubt s
 
 HSE 25 MHz -> PLL -> SYSCLK/HCLK 216 MHz, APB1 54 MHz, APB2 108 MHz (Over-Drive, Flash 7 WS).
 LTDC-Pixeltakt 9,6 MHz aus PLLSAI (N=192, R=5, DivR=4).
-Wird spaeter Audio (SAI) ergaenzt, muss die PLLSAI-Konfiguration beide Verbraucher beruecksichtigen.
+Der Audio-Takt kommt aus einer eigenen PLL (PLLI2S, siehe Abschnitt Audio), beide PLLs sind unabhaengig.
 
 ## Interrupts / FreeRTOS
 
@@ -50,6 +50,7 @@ Wird spaeter Audio (SAI) ergaenzt, muss die PLLSAI-Konfiguration beide Verbrauch
 | LED LD1 | PI1 |
 | User-Taster B1 | PI11 (aktiv high, EXTI15_10) |
 | LCD | LTDC-Datenleitungen auf PE4, PG12, PI9/10/14/15, PJ0..11/13..15, PK0..2/4..7; DISP = PI12; Backlight = PK3 |
+| Audio (SAI2, Codec WM8994) | PI4 = MCLK, PI5 = SCK, PI6 = SD, PI7 = FS (AF10); Steuerung ueber I2C3 |
 | QSPI-Flash (QUADSPI) | PB2 = CLK (AF9), PB6 = NCS (AF10), PD11 = IO0, PD12 = IO1, PE2 = IO2, PD13 = IO3 (AF9) |
 | I2C3 (Touch, Audio-Codec) | PH7 = SCL, PH8 = SDA (AF4, Open-Drain); Touch-Interrupt PI13 (noch ungenutzt) |
 | SDRAM (FMC) | PC3, PD0/1/8/9/10/14/15, PE0/1/7..15, PF0..5/11..15, PG0/1/4/5/8/15, PH3/5 |
@@ -118,3 +119,20 @@ Beim Boot wird nichts geschrieben oder geloescht. Das Log zeigt `QSPI: 16 MB ID 
 Ein Tastendruck von **>= 3 s** startet `qspi_write_test()`: Es wird von hinten ein komplett leerer 4-KB-Sektor
 gesucht (vorhandene Daten, z. B. vom ST-Demo, bleiben unangetastet), ein Muster programmiert, indirekt und per
 Mapping geprueft und der Sektor wieder geloescht. Das Log zeigt Zeiten und Fehleranzahl.
+
+## Audio
+
+`bsp_audio` gibt Stereo-Ton (16 Bit, 48 kHz) ueber den Kopfhoerer-Ausgang des Audio-Codecs WM8994 aus.
+
+- **Takt:** PLLI2S (VCO 344 MHz, /7 = 49,14 MHz) speist SAI2; das HAL teilt daraus MCLK = 256 * fs (12,29 MHz).
+  Der STM32 ist I2S-Master (SAI2 Block A: MCLK, SCK, FS, SD), der Codec Slave.
+- **Codec** (I2C3, 7-Bit `0x1A`, Register 16 Bit): Chip-ID (`0x8994`) pruefen, DAC1 -> Kopfhoerer-Pfad,
+  Kopfhoerer-Kaltstart ueber die eingebaute Write-Sequenz (Register `0x110`, ca. 300 ms), Lautstaerke ueber
+  `0x1C/0x1D`, Stummschaltung ueber `0x420/0x422`.
+- **Datenfluss:** DMA2 Stream 4 im Ringpuffer (2 Haelften zu je 480 Frames = 10 ms). Fertig abgespielte Haelften
+  melden DMA-Interrupts ueber eine Queue; der Audio-Task holt sie mit `bsp_audio_next_buffer()`, fuellt sie und gibt
+  sie mit `bsp_audio_release_buffer()` frei (Cache-Clean fuer den DMA).
+- **App:** `audio_task` spielt beim Start 300 ms 440 Hz. Danach erzeugt eine Beruehrung einen Sinuston:
+  X-Position = Tonhoehe (200..2000 Hz), Y-Position = Lautstaerke (oben laut). Loslassen blendet aus.
+  Standard-Lautstaerke 70 % (Kopfhoerer-Verstaerker), maximaler Pegel ca. 37 % Vollaussteuerung.
+- **Nur Ausgabe:** Eingaenge (Mikrofone, Line-In) sind noch nicht implementiert.
