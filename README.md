@@ -10,6 +10,7 @@ FreeRTOS, Build mit CMake + `arm-none-eabi-gcc`. Debug-Ausgaben erscheinen auf d
 | `bsp/` | Board-Support-Package: ein Treiber je Peripherie (`include/` = API, `src/` = Implementierung, `config/` = HAL-Konfiguration) |
 | `app/` | Applikation (Tasks, Logik) und `config/FreeRTOSConfig.h`. Greift nur ueber das BSP auf Hardware zu |
 | `ui/` | UI-Bibliothek: LVGL-Anbindung, Designs, Widget-Helfer, Seitenverwaltung (allgemeiner Teil) |
+| `projects/` | projektabhaengiger Teil (nur auf Release-Branches): zusaetzliche Hardware und deren Treiber, siehe `projects/<name>/README.md` |
 | `third_party/` | Git-Submodule: STM32F7-HAL, CMSIS-Core/-Device, FreeRTOS-Kernel, LVGL |
 | `linker/` | Linker-Script (Flash, DTCM, SRAM, SDRAM) |
 | `cmake/` | Toolchain-Datei |
@@ -37,7 +38,7 @@ Antippen der Seitenleiste oder ein kurzer Druck auf den User-Taster (B1) wechsel
 | Seite | Inhalt |
 |---|---|
 | **System** | Cockpit-Anzeige: runde Anzeigen fuer CPU-Last, CPU-Temperatur und VDDA, Peripherie-Status, aktivste Tasks, Test-Ton |
-| **Messwerte** | Live-Diagramm und Live-Tabelle von CPU-Temperatur (Grad Celsius) und VDDA (Volt), Pause/Loeschen |
+| **Messwerte** | drei Cockpit-Anzeigen (MCU-Temperatur, Luftfeuchte, Umgebungstemperatur), Live-Diagramm und Live-Tabelle, Pause/Loeschen |
 | **Log** | Systemmeldungen (Boot-Meldungen, Warnungen, Fehler) |
 
 Weitere Tasterfunktionen: 1..3 s halten = Audio-Diagnose im Log, >= 3 s = QSPI-Schreibtest.

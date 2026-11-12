@@ -6,6 +6,7 @@
 #include "pages.h"
 #include "app_ui.h"
 #include "data_hub.h"
+#include "bsp_dht.h"
 #include "sysinfo.h"
 #include "bsp_console.h"
 #include "bsp_lcd.h"
@@ -21,10 +22,11 @@ void audio_task_beep(int on) { (void)on; }
 
 #define NSAMPLES 100U
 static data_sample_t g_hub[NSAMPLES];
-uint32_t data_hub_count(void) { return NSAMPLES; }
+static unsigned g_count = NSAMPLES;
+uint32_t data_hub_count(void) { return g_count; }
 int data_hub_get(uint32_t serial, data_sample_t *out)
 {
-    if (serial >= NSAMPLES) return -1;
+    if (serial >= g_count) return -1;
     *out = g_hub[serial];
     return 0;
 }
@@ -91,9 +93,12 @@ static void snap(const char *name)
 int main(void)
 {
     for (unsigned i = 0; i < NSAMPLES; i++) {
-        g_hub[i].t_s = 600 + i;
-        g_hub[i].temp_c = 38.0f + 0.04f * (float)i + 0.6f * sinf((float)i * 0.25f);
-        g_hub[i].vdda_v = 3.31f + 0.012f * sinf((float)i * 0.4f);
+        g_hub[i].t_s = 600 + 2 * i;
+        g_hub[i].mcu_ok = 1;
+        g_hub[i].mcu_c = 38.0f + 0.04f * (float)i + 0.6f * sinf((float)i * 0.25f);
+        g_hub[i].dht_ok = (i % 17U) != 5U;                       /* gelegentlich eine fehlgeschlagene Messung */
+        g_hub[i].temp_c = (float)(int)(24.0f + 2.0f * sinf((float)i * 0.12f));       /* DHT11: ganze Grad */
+        g_hub[i].hum_pct = (float)(int)(55.0f + 8.0f * sinf((float)i * 0.09f + 1.0f));
     }
 
     lv_init();
@@ -123,6 +128,20 @@ int main(void)
     app_ui_init();
     run_ms(400);
     snap("0_start");
+
+    /* Sensor nicht angeschlossen: nur noch MCU-Werte */
+    for (unsigned i = 0; i < NSAMPLES; i++) g_hub[i].dht_ok = 0;
+    ui_pages_init(pages, 3, &ui_design);
+    ui_pages_show(1);
+    run_ms(400);
+    snap("2_messwerte_ohne_sensor");
+
+    /* Noch keine Messwerte (direkt nach dem Start) */
+    g_count = 0;
+    ui_pages_init(pages, 3, &ui_design);
+    ui_pages_show(1);
+    run_ms(400);
+    snap("2_messwerte_leer");
     printf("fertig\n");
     return 0;
 }
