@@ -160,3 +160,37 @@ CPU-Last und Tasks: FreeRTOS-Laufzeitstatistik mit dem DWT-Zyklenzaehler als Zei
 
 `tests/host/run.sh` uebersetzt `bsp_console`, `bsp_gfx` und `ui_render` fuer den PC, rendert alle Seiten in
 einen Framebuffer und schreibt PNGs (Standard: `build/host-render/`). Hilfreich beim Aendern des Layouts.
+
+## Sensorik
+
+**Auf dem Board vorhanden** (laut Datenblatt DB2582): kapazitiver Touchscreen (FT5336) und zwei digitale
+MEMS-Mikrofone (nicht in Betrieb, ueber den Audio-Eingang noch nicht implementiert). Es gibt **keinen**
+Umgebungssensor fuer Temperatur oder Luftfeuchte und keinen Beschleunigungs-/Lagesensor.
+Dafuer hat der STM32F746 interne Messkanaele: Chiptemperatur, interne Referenz (daraus VDDA) und VBAT.
+
+### CPU-Temperatur und Versorgungsspannung (`bsp_cpu_sensor`)
+
+```c
+float t_c, v;
+bsp_cpu_temperature(&t_c);     // Grad Celsius
+bsp_supply_voltage(&v);        // Volt (VDDA)
+```
+
+Die Werte sind fertig umgerechnet; die Applikation rechnet nichts. Intern: ADC1 Kanal 18 (Temperatursensor) und
+Kanal 17 (VREFINT), 12 Bit, 480 Zyklen Abtastzeit, Mittelwert aus 16 Messungen. VDDA = 3,3 V * VREFINT_CAL / VREFINT;
+der Temperaturrohwert wird auf 3,3 V umgerechnet und linear zwischen den beiden Werkspunkten (TS_CAL1 bei 30 C,
+TS_CAL2 bei 110 C, im Flash des Chips) interpoliert (`bsp_sensor_math.h`, am PC getestet).
+
+Einschraenkungen:
+- Gemessen wird die **Chiptemperatur**, nicht die Raumtemperatur. Mit Display und 216 MHz liegt sie deutlich ueber der Umgebung.
+- Genauigkeit laut Chip-Datenblatt etwa +-1,5 K (nicht aus diesem Repository geprueft); die Kalibrierung gilt bei 3,3 V.
+- Die Kalibrierwerte werden beim Init auf Plausibilitaet geprueft (Fehler `BSP_CPU_SENSOR_ERR_CAL`).
+
+Ausgabe: Boot-Log (`CPU: 41.3 C, VDDA 3.31 V`) und Systemseite. Fuer Text ohne `%f` (newlib-nano) gibt es
+`bsp_format_float()` in `bsp_util.h`.
+
+### Externe Sensoren (Temperatur, Luftfeuchte)
+
+Am Arduino-Stecker (I2C1 / SPI / ADC) lassen sich z. B. SHT3x, BME280 oder HDC1080 anschliessen. Ein Treiber soll
+dieselbe Schnittstelle liefern (Grad Celsius, Prozent relative Feuchte, hPa als `float`). I2C3 ist belegt
+(Touch, Audio-Codec); ein externer Sensor gehoert an einen eigenen Bus.

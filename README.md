@@ -38,6 +38,8 @@ Oben im Display steht eine Tab-Leiste. Antippen oder ein kurzer Druck auf den Us
 | **TOUCH** | Zeichenflaeche fuer bis zu 5 Finger (Farbe je Finger); gleichzeitig Sinuston: X = Tonhoehe, Y = Lautstaerke. Erneutes Tippen auf den Tab TOUCH loescht die Zeichnung |
 | **LOG** | Meldungen des Systems (die Boot-Meldungen stehen hier) |
 
+Die Systemseite zeigt auch die Chiptemperatur (Grad Celsius) und die Versorgungsspannung (Volt), siehe `docs/architektur.md` (Abschnitt Sensorik).
+
 Weitere Tasterfunktionen: 1..3 s halten = Audio-Diagnose im Log, >= 3 s = QSPI-Schreibtest.
 
 ## Flashen (STM32CubeProgrammer)

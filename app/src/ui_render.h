@@ -33,6 +33,9 @@ typedef struct {
     uint32_t uptime_s;
     uint32_t heap_free, heap_min, heap_total;        /* Bytes */
     uint8_t  cpu_percent;                            /* Auslastung gesamt (100 - Idle) */
+    uint8_t  sensor_ok;                              /* 1 = cpu_temp_c und vdda_v sind gueltig */
+    float    cpu_temp_c;                             /* Chiptemperatur in Grad Celsius */
+    float    vdda_v;                                 /* Versorgungsspannung VDDA in Volt */
     uint8_t  task_count;
     ui_task_info_t task[UI_MAX_TASKS];
 } ui_system_t;

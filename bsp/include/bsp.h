@@ -3,7 +3,7 @@
 
 /* Board-Support-Package STM32F746G-Discovery.
  * bsp_init() bringt das Board bis zur Display-Konsole hoch:
- *   HAL, MPU/Caches, Takt 216 MHz, LED, SDRAM (+Test), LCD, Konsole, I2C3, Touch, User-Taster, QSPI-Flash.
+ *   HAL, MPU/Caches, Takt 216 MHz, LED, SDRAM (+Test), LCD, Konsole, I2C3, Touch, User-Taster, QSPI-Flash, CPU-Sensor.
  * Danach koennen BSP_LOGx()-Meldungen auf dem Display ausgegeben werden. */
 
 #include "bsp_led.h"
@@ -18,6 +18,8 @@
 #include "bsp_button.h"
 #include "bsp_qspi.h"
 #include "bsp_audio.h"
+#include "bsp_cpu_sensor.h"
+#include "bsp_util.h"
 #include "bsp_common.h"
 #include "bsp_sd.h"
 #include "bsp_usb.h"

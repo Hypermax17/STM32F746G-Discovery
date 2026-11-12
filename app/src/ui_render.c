@@ -2,6 +2,7 @@
 #include "bsp_gfx.h"
 #include "bsp_lcd.h"
 #include "bsp_console.h"
+#include "bsp_util.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -130,7 +131,22 @@ void ui_render_system(const ui_system_t *s)
     }
     line_draw(&l, row++);
 
+    /* Chiptemperatur und Versorgungsspannung (bereits in Grad Celsius und Volt) */
     line_init(&l);
+    if (s->sensor_ok) {
+        char t[16], v[16];
+        bsp_format_float(t, sizeof t, s->cpu_temp_c, 1);
+        bsp_format_float(v, sizeof v, s->vdda_v, 2);
+        line_put(&l, 0, "CPU-Temp", COL_TEXT);
+        snprintf(buf, sizeof buf, "%s C", t);
+        line_put(&l, 9, buf, s->cpu_temp_c > 85.0f ? COL_BAD : COL_OK);
+        line_put(&l, 21, "VDDA", COL_TEXT);
+        snprintf(buf, sizeof buf, "%s V", v);
+        line_put(&l, 26, buf, COL_OK);
+    } else {
+        line_put(&l, 0, "CPU-Sensor", COL_TEXT);
+        line_put(&l, 11, "FEHLT", COL_BAD);
+    }
     line_draw(&l, row++);
 
     line_init(&l);

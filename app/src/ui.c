@@ -54,6 +54,9 @@ static void gather_system(ui_system_t *s)
     s->qspi_mb   = (uint8_t)(BSP_QSPI_SIZE >> 20);
     s->has_sd = BSP_HAS_SD;  s->has_usb = BSP_HAS_USB;  s->has_eth = BSP_HAS_ETH;  s->has_cam = BSP_HAS_CAMERA;
 
+    /* Fertige physikalische Werte aus dem BSP (Grad Celsius, Volt) */
+    s->sensor_ok = (bsp_cpu_temperature(&s->cpu_temp_c) == 0) && (bsp_supply_voltage(&s->vdda_v) == 0);
+
     s->uptime_s   = xTaskGetTickCount() / configTICK_RATE_HZ;
     s->heap_free  = (uint32_t)xPortGetFreeHeapSize();
     s->heap_min   = (uint32_t)xPortGetMinimumEverFreeHeapSize();
