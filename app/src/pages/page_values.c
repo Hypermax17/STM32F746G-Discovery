@@ -25,7 +25,6 @@ static struct {
     lv_obj_t *pause_label;
     lv_obj_t *info;
     const ui_design_t *d;
-    int cockpit;              /* Layout: grosse Zahlen statt Kopfzeile */
     uint32_t rows;            /* Zeilen der Tabelle */
 } w;
 
@@ -117,9 +116,9 @@ static void sync(void)
     if (count > s_base && data_hub_get(count - 1U, &s) == 0) {
         bsp_format_float(t, sizeof t, s.temp_c, 1);
         bsp_format_float(v, sizeof v, s.vdda_v, 2);
-        snprintf(big, sizeof big, w.cockpit ? "%s" : "%s C", t);
+        snprintf(big, sizeof big, "%s C", t);
         lv_label_set_text(w.big_t, big);
-        snprintf(big, sizeof big, w.cockpit ? "%s" : "%s V", v);
+        snprintf(big, sizeof big, "%s V", v);
         lv_label_set_text(w.big_v, big);
     } else {
         lv_label_set_text(w.big_t, "-");
@@ -197,17 +196,17 @@ static void build_table(lv_obj_t *c, const ui_design_t *d, int32_t x, int32_t y,
     w.table = ui_table(tc, d, 4, 6 + hh, w.rows, 3, col_w);
 }
 
-static void build_buttons(lv_obj_t *c, const ui_design_t *d, int32_t x, int32_t y, int32_t bw, int32_t gap, int vertical)
+static void build_buttons(lv_obj_t *c, const ui_design_t *d, int32_t x, int32_t y, int32_t bw, int32_t gap)
 {
     lv_obj_t *bp = ui_button(c, d, s_paused ? "Weiter" : "Pause", x, y, bw, 30);
     w.pause_label = lv_obj_get_child(bp, 0);
     lv_obj_add_event_cb(bp, pause_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *bc = ui_button(c, d, "Loeschen", vertical ? x : x + bw + gap, vertical ? y + 30 + gap : y, bw, 30);
+    lv_obj_t *bc = ui_button(c, d, "Loeschen", x + bw + gap, y, bw, 30);
     lv_obj_add_event_cb(bc, clear_cb, LV_EVENT_CLICKED, NULL);
 }
 
-/* Layout CARDS: Kopfzeile mit Titel und aktuellen Werten, Diagramm links, Tabelle rechts */
-static void build_cards(const ui_design_t *d, ui_frame_t *f)
+/* Kopfzeile mit Titel und aktuellen Werten, Diagramm links, Tabelle rechts */
+static void build_layout(const ui_design_t *d, ui_frame_t *f)
 {
     lv_obj_t *c = f->content;
     lv_obj_t *title = ui_label(c, d, UI_TEXT_TITLE, "Messwerte");
@@ -233,61 +232,18 @@ static void build_cards(const ui_design_t *d, ui_frame_t *f)
     build_chart(c, d, 8, top, tx - 8 - 8, ch);
     build_table(c, d, tx, top, tw, ch);
 
-    build_buttons(c, d, 8, f->h - 38, 100, 8, 0);
+    build_buttons(c, d, 8, f->h - 38, 100, 8);
     w.info = ui_label(c, d, UI_TEXT_SMALL_DIM, "");
     lv_obj_set_pos(w.info, 228, f->h - 38 + 8);
     lv_obj_set_width(w.info, f->w - 228 - 8);
-}
-
-/* Layout COCKPIT: grosse Zahlen links, Diagramm und kleine Tabelle rechts */
-static void build_cockpit(const ui_design_t *d, ui_frame_t *f)
-{
-    lv_obj_t *c = f->content;
-    const int32_t lw = 148;
-    const int32_t bh = 80;
-
-    lv_obj_t *b1 = ui_card(c, d, 8, 4, lw, bh);
-    ui_label(b1, d, UI_TEXT_SMALL_DIM, "CPU-TEMP");
-    w.big_t = ui_label(b1, d, UI_TEXT_HERO, "-");
-    lv_obj_set_pos(w.big_t, 0, 14);
-    lv_obj_set_style_text_color(w.big_t, ui_col(d->accent), 0);
-    lv_obj_t *u1 = ui_label(b1, d, UI_TEXT_TITLE, "C");
-    lv_obj_align(u1, LV_ALIGN_BOTTOM_RIGHT, 0, -6);
-
-    lv_obj_t *b2 = ui_card(c, d, 8, 4 + bh + 6, lw, bh);
-    ui_label(b2, d, UI_TEXT_SMALL_DIM, "VDDA");
-    w.big_v = ui_label(b2, d, UI_TEXT_HERO, "-");
-    lv_obj_set_pos(w.big_v, 0, 14);
-    lv_obj_set_style_text_color(w.big_v, ui_col(d->warn), 0);
-    lv_obj_t *u2 = ui_label(b2, d, UI_TEXT_TITLE, "V");
-    lv_obj_align(u2, LV_ALIGN_BOTTOM_RIGHT, 0, -6);
-    lv_obj_set_style_pad_all(b1, 8, 0);
-    lv_obj_set_style_pad_all(b2, 8, 0);
-
-    const int32_t by = 4 + 2 * (bh + 6);
-    build_buttons(c, d, 8, by + 4, lw, 6, 1);
-    w.info = ui_label(c, d, UI_TEXT_SMALL_DIM, "");
-    lv_obj_set_pos(w.info, 10, by + 4 + 2 * 30 + 6 + 4);
-    lv_obj_set_width(w.info, lw);
-
-    const int32_t rx = 8 + lw + 8;
-    const int32_t rw = f->w - rx - 8;
-    const int32_t chart_h = 140;
-    build_chart(c, d, rx, 4, rw, chart_h);
-    build_table(c, d, rx, 4 + chart_h + 6, rw, f->h - 4 - chart_h - 6 - 8);
 }
 
 lv_obj_t *page_values_create(const ui_design_t *d, unsigned idx)
 {
     memset(&w, 0, sizeof w);
     w.d = d;
-    w.cockpit = (d->layout == UI_LAYOUT_COCKPIT);
     ui_frame_t f = ui_frame_create(d, idx);
-    if (w.cockpit) {
-        build_cockpit(d, &f);
-    } else {
-        build_cards(d, &f);
-    }
+    build_layout(d, &f);
 
     /* Verlauf aus dem Archiv nachladen */
     const uint32_t count = data_hub_count();

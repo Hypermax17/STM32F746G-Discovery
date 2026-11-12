@@ -6,7 +6,6 @@
 #define SCREEN_W 480
 #define SCREEN_H 272
 
-#define TOP_BAR_H   32
 #define SIDE_RAIL_W 76
 
 /* ---- Hilfen ------------------------------------------------------------------ */
@@ -28,7 +27,6 @@ void ui_label_set_kind_color(lv_obj_t *label, const ui_design_t *d, ui_text_kind
     case UI_TEXT_SMALL_DIM: f = d->font_small; c = d->text_dim; break;
     case UI_TEXT_BIG:       f = d->font_big; break;
     case UI_TEXT_TITLE:     f = d->font_title; break;
-    case UI_TEXT_HERO:      f = d->font_hero; break;
     case UI_TEXT_ACCENT:    c = d->accent; break;
     case UI_TEXT_WARN:      c = d->warn; break;
     case UI_TEXT_OK:        c = d->ok; break;
@@ -173,6 +171,7 @@ ui_gauge_t ui_gauge(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y
     const int32_t aw = size / 9;
     lv_obj_set_style_arc_width(g.arc, aw, LV_PART_MAIN);
     lv_obj_set_style_arc_color(g.arc, ui_col(d->border), LV_PART_MAIN);
+    lv_obj_set_style_arc_opa(g.arc, (lv_opa_t)(d->border_opa / 3U), LV_PART_MAIN);   /* dezente Spur */
     lv_obj_set_style_arc_rounded(g.arc, true, LV_PART_MAIN);
     lv_obj_set_style_arc_width(g.arc, aw, LV_PART_INDICATOR);
     lv_obj_set_style_arc_color(g.arc, ui_col(rgb), LV_PART_INDICATOR);
@@ -194,16 +193,9 @@ void ui_gauge_set(const ui_gauge_t *g, int32_t value, const char *text)
 
 /* ---- Navigation ----------------------------------------------------------------- */
 
-#define NAV_DESIGN_BASE 100U
-
 static void nav_click_cb(lv_event_t *e)
 {
-    const uintptr_t id = (uintptr_t)lv_event_get_user_data(e);
-    if (id >= NAV_DESIGN_BASE) {
-        ui_pages_next_design((unsigned)(id - NAV_DESIGN_BASE));
-    } else {
-        ui_pages_show((unsigned)id);
-    }
+    ui_pages_show((unsigned)(uintptr_t)lv_event_get_user_data(e));
 }
 
 static void style_nav_button(lv_obj_t *b, const ui_design_t *d, int active)
@@ -281,40 +273,20 @@ ui_frame_t ui_frame_create(const ui_design_t *d, unsigned page_idx)
         lv_obj_set_style_bg_grad_dir(f.screen, LV_GRAD_DIR_VER, 0);
     }
 
+    /* Seitenleiste links: Symbol und Name je Seite */
     const unsigned n = ui_pages_count();
-    int32_t cx = 0, cy = 0;
-    char buf[24];
-
-    if (d->nav == UI_NAV_TOP) {
-        lv_obj_t *b = bar(f.screen, d, 0, 0, SCREEN_W, TOP_BAR_H);
-        for (unsigned i = 0; i < n; i++) {
-            nav_button(b, d, ui_pages_name(i), 8 + (int32_t)i * 104, 4, 100, 24, i, i == page_idx);
-        }
-        lv_snprintf(buf, sizeof buf, "Design %c", d->letter);
-        nav_button(b, d, buf, SCREEN_W - 8 - 84, 4, 84, 24, NAV_DESIGN_BASE + page_idx, 0);
-        line(f.screen, d, 0, TOP_BAR_H - 1, SCREEN_W, 1);
-        cy = TOP_BAR_H;
-        f.w = SCREEN_W;
-        f.h = SCREEN_H - TOP_BAR_H;
-    } else {
-        lv_obj_t *b = bar(f.screen, d, 0, 0, SIDE_RAIL_W, SCREEN_H);
-        const int32_t item_h = 58;
-        for (unsigned i = 0; i < n; i++) {
-            rail_button(b, d, ui_pages_icon(i), ui_pages_name(i), 6 + (int32_t)i * (item_h + 4), item_h, i, i == page_idx);
-        }
-        lv_snprintf(buf, sizeof buf, "Design %c", d->letter);
-        lv_obj_t *db = nav_button(b, d, buf, 4, SCREEN_H - 6 - 34, SIDE_RAIL_W - 8, 34, NAV_DESIGN_BASE + page_idx, 0);
-        lv_obj_set_style_text_font(db, d->font_small, 0);
-        lv_obj_set_style_border_width(db, d->border_w, 0);
-        line(f.screen, d, SIDE_RAIL_W - 1, 0, 1, SCREEN_H);
-        cx = SIDE_RAIL_W;
-        f.w = SCREEN_W - SIDE_RAIL_W;
-        f.h = SCREEN_H;
+    lv_obj_t *b = bar(f.screen, d, 0, 0, SIDE_RAIL_W, SCREEN_H);
+    const int32_t item_h = 58;
+    for (unsigned i = 0; i < n; i++) {
+        rail_button(b, d, ui_pages_icon(i), ui_pages_name(i), 6 + (int32_t)i * (item_h + 4), item_h, i, i == page_idx);
     }
+    line(f.screen, d, SIDE_RAIL_W - 1, 0, 1, SCREEN_H);
 
+    f.w = SCREEN_W - SIDE_RAIL_W;
+    f.h = SCREEN_H;
     f.content = lv_obj_create(f.screen);
     plain(f.content);
-    lv_obj_set_pos(f.content, cx, cy);
+    lv_obj_set_pos(f.content, SIDE_RAIL_W, 0);
     lv_obj_set_size(f.content, f.w, f.h);
     return f;
 }

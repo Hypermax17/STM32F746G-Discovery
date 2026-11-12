@@ -1,4 +1,4 @@
-/* PC-Test der LVGL-Oberflaeche: rendert jede Seite in jedem Design in .rgb565-Dateien (Framebuffer-Dump).
+/* PC-Test der LVGL-Oberflaeche: rendert jede Seite in .rgb565-Dateien (Framebuffer-Dump).
  * Die Daten (Messwerte, Log, Systemzustand) sind synthetisch; die Seiten, Widgets, Designs und die
  * Seitenverwaltung sind dieselben Quelldateien wie in der Firmware. */
 #include "lvgl.h"
@@ -109,21 +109,17 @@ int main(void)
         { "Log", LV_SYMBOL_LIST, page_log_create, page_log_update },
     };
     static const char *const page_name[] = { "system", "messwerte", "log" };
-    static const char design_letter[] = { 'A', 'B', 'C' };
 
-    for (unsigned d = 0; d < 3; d++) {
-        for (unsigned p = 0; p < 3; p++) {
-            uint8_t designs[3] = { (uint8_t)d, (uint8_t)d, (uint8_t)d };
-            ui_pages_init(pages, designs, 3);
-            ui_pages_show(p);
-            run_ms(400);
-            char name[64];
-            snprintf(name, sizeof name, "%u_%s_design%c", p + 1, page_name[p], design_letter[d]);
-            snap(name);
-        }
+    ui_pages_init(pages, 3, &ui_design);
+    for (unsigned p = 0; p < 3; p++) {
+        ui_pages_show(p);
+        run_ms(400);
+        char name[64];
+        snprintf(name, sizeof name, "%u_%s", p + 1, page_name[p]);
+        snap(name);
     }
 
-    /* Auslieferungszustand: Seite 1 = Design A, 2 = B, 3 = C */
+    /* Auslieferungszustand (wie die Firmware) */
     app_ui_init();
     run_ms(400);
     snap("0_start");

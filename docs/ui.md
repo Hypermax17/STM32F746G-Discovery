@@ -19,30 +19,26 @@ Regeln:
 - **LVGL ist nicht thread-sicher.** Alle LVGL-Aufrufe laufen im UI-Task. Andere Tasks melden nur Zustaende
   (`ui_port_touch_update`, `ui_port_request_next_page`) oder legen Daten im `data_hub`/Log-Ringpuffer ab; die Seiten holen sie
   per Update-Timer (500 ms).
-- **Zustand gehoert nicht in die Widgets.** Dadurch kann jede Seite jederzeit mit einem anderen Design neu aufgebaut werden.
+- **Zustand gehoert nicht in die Widgets**, sondern in Datenquellen (`data_hub`, `sysinfo`, Log-Ringpuffer). Eine Seite kann dadurch jederzeit neu aufgebaut werden.
 - Die Anwendung bekommt Messwerte **fertig in Einheiten** (Grad Celsius, Volt) vom BSP und rechnet nichts um.
 
-## Die drei Designs (zum Vergleichen)
+## Basisdesign "Glas violett"
 
-Jede Seite startet absichtlich in einem anderen Design. Die Schaltflaeche **"Design X"** in der Navigation baut die
-aktuelle Seite mit dem naechsten Design neu auf (A -> B -> C -> A), sodass jede Seite in jedem Design angesehen werden kann.
+Alle Seiten nutzen dasselbe Design (`ui_design` in `ui/src/ui_design.c`): Verlauf von tiefem Violett nach Nachtblau, durchscheinende
+Karten mit hellem Rand und weichem Schatten, grosse Rundungen, Akzent Violett (Hauptkurve, aktive Navigation), Rosa als zweite
+Kurve, Mintgruen fuer "in Ordnung". Navigation ist eine **Seitenleiste links** (Symbol + Name, 76 px); der Inhaltsbereich ist
+404 x 272 px gross. Schriften: Montserrat 12 / 14 / 20 / 28.
 
-| Design | Seite beim Start | Stil | Navigation | Layout |
-|---|---|---|---|---|
-| **A** Dashboard dunkel | System | dunkles Blau, Karten mit Rundung, Akzent Cyan | Reiter oben | Karten, Tabellen |
-| **B** Cockpit gruen | Messwerte | fast schwarzer Graphit mit Gruenstich, leuchtend gruener Akzent, Bernstein als zweite Farbe, kaum Rahmen | Seitenleiste links (Symbol + Name) | grosse Zahlen (48 px), runde Anzeigen, kompakte Tabellen |
-| **C** Glas violett | Log | Verlauf von Violett nach Nachtblau, durchscheinende Karten mit hellem Rand und Schatten, grosse Rundungen, Akzent Violett, 2. Kurve Rosa | Seitenleiste links | Karten, Tabellen |
-
-Ein Design besteht aus `ui_design_t` (Farben, Deckkraft, Schatten, Schriften, Navigationsstil) und einem **Layout-Stil**:
-`UI_LAYOUT_CARDS` nutzen A und C, `UI_LAYOUT_COCKPIT` (B) ordnet die Seiten System und Messwerte anders an.
-Die Seiten passen sich der Inhaltsgroesse an (`f.w`/`f.h`, 480x240 bei Reitern oben, 404x272 mit Seitenleiste).
+Farben, Deckkraft, Schatten, Rundung und Schriften stehen an einer Stelle (`ui_design_t`); die Seiten und Widgets
+(`ui_widgets.c`) bauen sich daraus auf. Ein abweichendes Design fuer ein Projekt ist moeglich, indem eine zweite
+`ui_design_t`-Konstante angelegt und an `ui_pages_init()` uebergeben wird.
 
 Umlaute und Sonderzeichen (Grad-Zeichen) fehlen in den eingebauten Schriften; die Texte sind daher ASCII ("Loeschen", "41.3 C").
 
 ## Seiten
 
-- **System:** Peripherie-Status (Punkt gruen/rot), CPU-Temperatur und VDDA, **Live-Tabelle** der Tasks (Prioritaet, freier Stack, CPU-Anteil), Test-Ton-Button. Im Cockpit-Layout: drei runde Anzeigen (CPU-Last, CPU-Temperatur, VDDA) und die vier aktivsten Tasks.
-- **Messwerte:** **Live-Diagramm** (2 Kurven mit eigener Y-Achse links/rechts, automatische Skalierung, 128 Punkte = ca. 2 min) und **Live-Tabelle** der letzten Messwerte, Buttons Pause/Loeschen.
+- **System (Cockpit-Anzeige):** drei runde Anzeigen (CPU-Last, CPU-Temperatur in Grad Celsius, VDDA in Volt), Status der Peripherie (Punkt gruen/rot), Heap und Laufzeit, **Live-Tabelle** der vier aktivsten Tasks (Prioritaet, freier Stack, CPU-Anteil), Test-Ton-Button.
+- **Messwerte:** **Live-Diagramm** (2 Kurven mit eigener Y-Achse links/rechts, automatische Skalierung, 128 Punkte = ca. 2 min) und **Live-Tabelle** der letzten Messwerte, aktuelle Werte gross in der Kopfzeile, Buttons Pause/Loeschen.
 - **Log:** Meldungen mit Farbe nach Schwere, scrollbar per Wischen, Buttons Pause/Loeschen.
 
 Der Taster B1 (kurzer Druck) blaettert zur naechsten Seite.
@@ -51,12 +47,7 @@ Der Taster B1 (kurzer Druck) blaettert zur naechsten Seite.
 
 1. `app/src/pages/page_xyz.c`: `lv_obj_t *page_xyz_create(const ui_design_t *d, unsigned idx)` aufbauen
    (`ui_frame_create(d, idx)` liefert Bildschirm, Navigation und Inhaltsbereich `f.content`, `f.w`, `f.h`), optional `page_xyz_update()`.
-2. In `app/src/pages/pages.h` deklarieren, in `app/CMakeLists.txt` eintragen, in `app/src/app_ui.c` (`k_pages[]`) aufnehmen.
-
-## Neues Design anlegen
-
-Eine weitere `ui_design_t`-Konstante in `ui/src/ui_design.c` anlegen, in `ui_designs[]` eintragen und `UI_DESIGN_COUNT` erhoehen.
-Wird nur ein Design gewaehlt, bleiben die anderen als Beispiele stehen oder werden entfernt.
+2. In `app/src/pages/pages.h` deklarieren, in `app/CMakeLists.txt` eintragen, in `app/src/app_ui.c` (`k_pages[]`, mit Name und Symbol) aufnehmen.
 
 ## Speicher
 
@@ -69,7 +60,7 @@ Wird nur ein Design gewaehlt, bleiben die anderen als Beispiele stehen oder werd
 ## Darstellung ohne Board pruefen
 
 ```bash
-tests/host/run_ui.sh        # alle Seiten in allen Designs -> PNGs in build/host-ui/
+tests/host/run_ui.sh        # alle Seiten -> PNGs in build/host-ui/
 tests/host/run.sh           # Display-Konsole (Boot-Log, Fehleranzeige) und Rechentests
 ```
 
