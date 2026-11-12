@@ -13,18 +13,17 @@ typedef enum {
     UI_TEXT_SMALL_DIM,
     UI_TEXT_BIG,       /* grosser Messwert */
     UI_TEXT_TITLE,     /* Ueberschrift */
-    UI_TEXT_HERO,      /* sehr grosse Zahl (Cockpit) */
     UI_TEXT_ACCENT,
     UI_TEXT_WARN,
     UI_TEXT_OK,
     UI_TEXT_BAD
 } ui_text_kind_t;
 
-/* Seitengeruest: Bildschirm mit Hintergrund, Navigation (gemaess Design.nav) und Inhaltsbereich */
+/* Seitengeruest: Bildschirm mit Hintergrund, Seitenleiste links und Inhaltsbereich */
 typedef struct {
     lv_obj_t *screen;
     lv_obj_t *content;      /* Inhaltsbereich (ohne Scrollen/Rahmen) */
-    int32_t   w, h;         /* Groesse des Inhaltsbereichs */
+    int32_t   w, h;         /* Groesse des Inhaltsbereichs (404 x 272) */
 } ui_frame_t;
 
 /* page_idx: Index dieser Seite (markiert den aktiven Reiter) */

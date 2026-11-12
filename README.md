@@ -31,16 +31,15 @@ Bei jedem Push baut GitHub Actions (`.github/workflows/build.yml`) die Applikati
 
 ## Bedienung der Basisapplikation
 
-Die Oberflaeche basiert auf LVGL (Details: [docs/ui.md](docs/ui.md)). Unten bzw. oben steht die Navigation; ein kurzer Druck
-auf den User-Taster (B1) blaettert zur naechsten Seite.
+Die Oberflaeche basiert auf LVGL (Details: [docs/ui.md](docs/ui.md)), Design "Glas violett" mit Seitenleiste links.
+Antippen der Seitenleiste oder ein kurzer Druck auf den User-Taster (B1) wechselt die Seite.
 
 | Seite | Inhalt |
 |---|---|
-| **System** | Peripherie-Status, CPU-Temperatur und VDDA, Live-Tabelle der Tasks, Test-Ton |
+| **System** | Cockpit-Anzeige: runde Anzeigen fuer CPU-Last, CPU-Temperatur und VDDA, Peripherie-Status, aktivste Tasks, Test-Ton |
 | **Messwerte** | Live-Diagramm und Live-Tabelle von CPU-Temperatur (Grad Celsius) und VDDA (Volt), Pause/Loeschen |
 | **Log** | Systemmeldungen (Boot-Meldungen, Warnungen, Fehler) |
 
-Die Schaltflaeche **"Design X"** baut die aktuelle Seite mit dem naechsten Design neu auf (A Dashboard dunkel, B Cockpit gruen, C Glas violett).
 Weitere Tasterfunktionen: 1..3 s halten = Audio-Diagnose im Log, >= 3 s = QSPI-Schreibtest.
 
 ## Flashen (STM32CubeProgrammer)
