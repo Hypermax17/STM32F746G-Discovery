@@ -37,7 +37,12 @@ extern uint32_t SystemCoreClock;
 #define configUSE_TICK_HOOK                      0
 #define configUSE_MALLOC_FAILED_HOOK             1
 #define configCHECK_FOR_STACK_OVERFLOW           2
-#define configGENERATE_RUN_TIME_STATS            0
+#define configGENERATE_RUN_TIME_STATS            1
+/* Laufzeitzaehler: Zyklenzaehler (DWT) / 256, siehe bsp_system.c */
+void bsp_runtime_counter_init(void);
+uint32_t bsp_runtime_counter(void);
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() bsp_runtime_counter_init()
+#define portGET_RUN_TIME_COUNTER_VALUE()         bsp_runtime_counter()
 
 /* ---- Software-Timer ----------------------------------------------------- */
 #define configUSE_TIMERS                         1

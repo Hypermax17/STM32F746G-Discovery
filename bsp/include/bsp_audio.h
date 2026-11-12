@@ -21,6 +21,9 @@
  * *codec_id erhaelt die gelesene Chip-ID (erwartet 0x8994). */
 int bsp_audio_init(uint16_t *codec_id);
 
+/* 1, wenn bsp_audio_init() erfolgreich war */
+int bsp_audio_is_ready(void);
+
 /* Beginnt die Ausgabe (zunaechst Stille) und hebt die Stummschaltung auf. */
 int bsp_audio_start(void);
 void bsp_audio_stop(void);

@@ -7,6 +7,7 @@ add_library(bsp OBJECT
     src/bsp_sdram.c
     src/bsp_lcd.c
     src/bsp_font.c
+    src/bsp_gfx.c
     src/bsp_console.c
     src/bsp_log.c
     src/bsp_fault.c

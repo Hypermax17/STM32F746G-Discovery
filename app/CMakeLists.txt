@@ -11,6 +11,8 @@ add_executable(app
     src/button_task.c
     src/qspi_test.c
     src/audio_task.c
+    src/ui.c
+    src/ui_render.c
     $<TARGET_OBJECTS:stm32_startup>)
 
 set_target_properties(app PROPERTIES OUTPUT_NAME stm32f746g_app SUFFIX .elf)

@@ -1,5 +1,5 @@
 #include "button_task.h"
-#include "app.h"
+#include "ui.h"
 #include "bsp.h"
 #include "qspi_test.h"
 
@@ -34,7 +34,7 @@ static void button_task(void *arg)
                 bsp_audio_dump();
             } else {
                 BSP_LOGI("Taste: kurz (%lu ms)", (unsigned long)held);
-                app_heartbeat_toggle_rate();
+                ui_next_page();
             }
         }
     }

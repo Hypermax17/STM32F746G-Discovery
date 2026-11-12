@@ -47,7 +47,7 @@ Der Audio-Takt kommt aus einer eigenen PLL (PLLI2S, siehe Abschnitt Audio), beid
 
 ## Display-Konsole
 
-`bsp_console` (40x17 Zeichen, 5x7-Font skaliert x2): 16 scrollende Logzeilen + 1 Statuszeile.
+`bsp_console` (40x17 Zeichen, 5x7-Font skaliert x2): Zeile 0 = Tab-Leiste der App, Zeilen 1..15 = scrollender Log-Bereich, Zeile 16 = Statuszeile. Aller Text wird in einem Ringpuffer (64 Zeilen) gespeichert; die Konsole kann ausgeblendet werden (`bsp_console_set_visible`) und zeichnet sich beim Einblenden aus dem Ringpuffer neu. `bsp_gfx` bietet Text, Linien, Rahmen und Kreise.
 `BSP_LOGD/I/W/E()` aus `bsp_log.h` (printf-Format, ohne `%f`). `bsp_panic()` zeigt Fehler in Rot und blinkt LD1 (6x).
 
 ## Pinbelegung (verwendet)
@@ -144,3 +144,19 @@ Mapping geprueft und der Sektor wieder geloescht. Das Log zeigt Zeiten und Fehle
   Standard-Lautstaerke 70 % (Kopfhoerer-Verstaerker), maximaler Pegel ca. 37 % Vollaussteuerung.
 - **Diagnose:** Taster 1..3 s halten -> Log mit SAI-Takt, DMA-Halbpuffer pro Sekunde (Soll: je 100) und Codec-Registern.
 - **Nur Ausgabe:** Eingaenge (Mikrofone, Line-In) sind noch nicht implementiert.
+
+## Oberflaeche (Schritt 8)
+
+`app/src/ui.c` (Task `ui`) verwaltet drei Seiten; gezeichnet wird in `ui_render.c` (reine Darstellung).
+Touch-Zustaende kommen ueber eine Queue vom `touch`-Task, Seitenwechsel-Wuensche vom `button`-Task.
+Wird die Seite LOG verlassen, blendet die UI die Konsole aus und beschreibt die Zeilen 1..15 selbst;
+neue Log-Meldungen landen weiter im Ringpuffer. Bei einem Fehler (`bsp_panic`, Fault-Handler) uebernimmt die
+Konsole wieder den ganzen Bildschirm (Zeilen 0..15).
+
+CPU-Last und Tasks: FreeRTOS-Laufzeitstatistik mit dem DWT-Zyklenzaehler als Zeitbasis
+(`bsp_runtime_counter`, Zyklen / 256). Die Prozentwerte sind die Anteile seit der letzten Aktualisierung (500 ms).
+
+### Darstellung ohne Board pruefen
+
+`tests/host/run.sh` uebersetzt `bsp_console`, `bsp_gfx` und `ui_render` fuer den PC, rendert alle Seiten in
+einen Framebuffer und schreibt PNGs (Standard: `build/host-render/`). Hilfreich beim Aendern des Layouts.

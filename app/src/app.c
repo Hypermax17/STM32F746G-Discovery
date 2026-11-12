@@ -4,6 +4,7 @@
 #include "touch_task.h"
 #include "button_task.h"
 #include "audio_task.h"
+#include "ui.h"
 #include "bsp.h"
 
 #include <stdio.h>
@@ -17,19 +18,9 @@
 
 #define HEARTBEAT_STACK_WORDS 512
 #define HEARTBEAT_PRIORITY    1
+#define BLINK_MS              500U
 
-#define BLINK_SLOW_MS 500U
-#define BLINK_FAST_MS 100U
-
-static volatile uint32_t s_blink_ms = BLINK_SLOW_MS;
-
-void app_heartbeat_toggle_rate(void)
-{
-    s_blink_ms = (s_blink_ms == BLINK_SLOW_MS) ? BLINK_FAST_MS : BLINK_SLOW_MS;
-    BSP_LOGI("LED: Blinken alle %lu ms", (unsigned long)s_blink_ms);
-}
-
-/* Heartbeat: LED LD1 blinkt (Tempo per Taster), die Statuszeile zeigt Laufzeit und freien Heap. */
+/* Heartbeat: LED LD1 blinkt (500 ms), die Statuszeile zeigt Laufzeit und freien Heap. */
 static void heartbeat_task(void *arg)
 {
     (void)arg;
@@ -44,7 +35,7 @@ static void heartbeat_task(void *arg)
             app_status_set_system(now / configTICK_RATE_HZ,
                                   (uint32_t)(xPortGetFreeHeapSize() / 1024U));
         }
-        vTaskDelayUntil(&last, pdMS_TO_TICKS(s_blink_ms));
+        vTaskDelayUntil(&last, pdMS_TO_TICKS(BLINK_MS));
     }
 }
 
@@ -61,6 +52,7 @@ void app_init(void)
                     HEARTBEAT_PRIORITY, NULL) != pdPASS) {
         bsp_panic("Task 'heartbeat' nicht erzeugt");
     }
+    ui_start();
     audio_task_start();
     button_task_start();
     touch_task_start();
