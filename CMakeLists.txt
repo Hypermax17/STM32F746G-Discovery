@@ -27,6 +27,7 @@ if(GIT_FOUND)
     endif()
 endif()
 
-add_subdirectory(third_party)   # CMSIS, HAL, FreeRTOS
+add_subdirectory(third_party)   # CMSIS, HAL, FreeRTOS, LVGL
 add_subdirectory(bsp)           # Board-Support-Package (Treiber)
+add_subdirectory(ui)            # UI-Bibliothek (LVGL-Anbindung, Designs, Seitenverwaltung)
 add_subdirectory(app)           # Applikation

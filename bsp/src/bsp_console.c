@@ -32,6 +32,7 @@ static uint32_t s_count;       /* gespeicherte Zeilen (>= 1) */
 static uint32_t s_col;         /* Cursor-Spalte */
 static uint32_t s_row;         /* Bildschirmzeile der aktuellen Zeile (nur gueltig, wenn sichtbar) */
 static uint32_t s_first = BSP_CONSOLE_FIRST_LOG_ROW;
+static uint32_t s_total_lines;   /* Anzahl begonnener Zeilen seit dem Start (fortlaufende Zeilennummer) */
 
 static void draw_cell(uint32_t col, uint32_t row, char c, uint16_t fg, uint16_t bg)
 {
@@ -63,6 +64,7 @@ static void scroll_up(void)
 static void newline(void)
 {
     s_head = (s_head + 1U) % RING_LINES;
+    s_total_lines++;
     s_len[s_head] = 0;
     if (s_count < RING_LINES) {
         s_count++;
@@ -145,7 +147,7 @@ static void status_draw(const char *text)
 
 void bsp_console_status_unlocked(const char *text)
 {
-    if (s_ready) {
+    if (s_ready && s_visible) {
         status_draw(text);
     }
 }
@@ -156,7 +158,9 @@ void bsp_console_status(const char *text)
         return;
     }
     lock();
-    status_draw(text);
+    if (s_visible) {
+        status_draw(text);
+    }
     unlock();
 }
 
@@ -186,7 +190,7 @@ void bsp_console_clear_unlocked(void)
     s_first = 0;                 /* Fehleranzeige nutzt auch die Zeile der Tab-Leiste */
     s_visible = 1;
     ring_reset();
-    clear_rows(0, LAST_ROW);
+    clear_rows(0, STATUS_ROW);   /* ganzer Bildschirm (die UI-Bibliothek kann Inhalt hinterlassen haben) */
 }
 
 int bsp_console_init(void)
@@ -202,6 +206,32 @@ int bsp_console_init(void)
     s_ready = 1;
     status_draw("");
     return 0;
+}
+
+uint32_t bsp_console_line_total(void)
+{
+    return s_total_lines;
+}
+
+int bsp_console_read_line(uint32_t serial, char *out, size_t out_size, uint16_t *color)
+{
+    int rc = -1;
+    lock();
+    /* Zeile 'serial' ist noch im Ringpuffer, wenn sie hoechstens (count-1) Zeilen vor der aktuellen liegt */
+    if (serial <= s_total_lines && s_total_lines - serial < s_count && out_size > 0U) {
+        const uint32_t idx = (s_head + RING_LINES - (s_total_lines - serial)) % RING_LINES;
+        const uint32_t n = (s_len[idx] < out_size - 1U) ? s_len[idx] : (uint32_t)(out_size - 1U);
+        for (uint32_t i = 0; i < n; i++) {
+            out[i] = s_ch[idx][i];
+        }
+        out[n] = '\0';
+        if (color != NULL) {
+            *color = (s_len[idx] > 0U) ? s_cl[idx][0] : 0xFFFFU;
+        }
+        rc = 0;
+    }
+    unlock();
+    return rc;
 }
 
 int bsp_console_ready(void)

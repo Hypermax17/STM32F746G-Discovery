@@ -6,18 +6,21 @@ add_executable(app
     src/app.c
     src/app_hooks.c
     src/fault_test.c
-    src/app_status.c
     src/touch_task.c
     src/button_task.c
     src/qspi_test.c
     src/audio_task.c
-    src/ui.c
-    src/ui_render.c
+    src/sysinfo.c
+    src/data_hub.c
+    src/app_ui.c
+    src/pages/page_system.c
+    src/pages/page_values.c
+    src/pages/page_log.c
     $<TARGET_OBJECTS:stm32_startup>)
 
 set_target_properties(app PROPERTIES OUTPUT_NAME stm32f746g_app SUFFIX .elf)
 
-target_include_directories(app PRIVATE src)
+target_include_directories(app PRIVATE src src/pages)
 target_compile_definitions(app PRIVATE APP_VERSION="${APP_VERSION}")
 target_compile_options(app PRIVATE -Wall -Wextra)
 
@@ -31,7 +34,7 @@ if(APP_FAULT_TEST)
         APP_FAULT_TEST_${_ft}=1
         APP_FAULT_TEST_NAME="${APP_FAULT_TEST}")
 endif()
-target_link_libraries(app PRIVATE bsp stm32_hal freertos m)
+target_link_libraries(app PRIVATE ui bsp stm32_hal freertos lvgl m)
 target_link_options(app PRIVATE
     -T${LINKER_SCRIPT}
     -Wl,-Map=$<TARGET_FILE_DIR:app>/stm32f746g_app.map

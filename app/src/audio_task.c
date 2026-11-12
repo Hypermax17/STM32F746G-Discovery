@@ -12,10 +12,6 @@
 #define TABLE_BITS   10U
 #define TABLE_SIZE   (1U << TABLE_BITS)
 
-#define FREQ_MIN_HZ  200U
-#define FREQ_MAX_HZ  2000U
-#define AMP_MIN      600          /* ca. 2 % Vollaussteuerung */
-#define AMP_MAX      12000        /* ca. 37 % */
 #define BEEP_HZ      440U
 #define BEEP_AMP     6000
 #define BEEP_MS      300U
@@ -25,16 +21,10 @@ static int16_t s_sine[TABLE_SIZE];
 static volatile uint32_t s_freq_hz = BEEP_HZ;
 static volatile int32_t  s_amp_target;
 
-void audio_task_set_touch(int active, unsigned x, unsigned y)
+void audio_task_beep(int on)
 {
-    if (!active) {
-        s_amp_target = 0;
-        return;
-    }
-    if (x > BSP_LCD_WIDTH - 1U)  x = BSP_LCD_WIDTH - 1U;
-    if (y > BSP_LCD_HEIGHT - 1U) y = BSP_LCD_HEIGHT - 1U;
-    s_freq_hz = FREQ_MIN_HZ + (x * (FREQ_MAX_HZ - FREQ_MIN_HZ)) / (BSP_LCD_WIDTH - 1U);
-    s_amp_target = AMP_MIN + (int32_t)(((BSP_LCD_HEIGHT - 1U - y) * (AMP_MAX - AMP_MIN)) / (BSP_LCD_HEIGHT - 1U));
+    s_freq_hz = BEEP_HZ;
+    s_amp_target = on ? BEEP_AMP : 0;
 }
 
 static void build_table(void)
@@ -60,7 +50,7 @@ static void audio_task(void *arg)
         BSP_LOGE("Audio: Start fehlgeschlagen");
         vTaskDelete(NULL);
     }
-    BSP_LOGI("Audio: Ton %u Hz (Touch: X=Ton Y=Pegel)", (unsigned)BEEP_HZ);
+    BSP_LOGI("Audio: Ton %u Hz", (unsigned)BEEP_HZ);
 
     uint32_t phase = 0;
     int32_t amp = 0;
