@@ -94,4 +94,18 @@ void bsp_init(void)
             BSP_LOGE("QSPI: Lesen/Mapping fehlgeschlagen (%d)", rd);
         }
     }
+
+    /* Interne Sensoren: Chiptemperatur und Versorgungsspannung */
+    int src = bsp_cpu_sensor_init();
+    float t_c = 0.0f, v_dda = 0.0f;
+    if (src != 0) {
+        BSP_LOGW("CPU-Sensor: Init Fehler %d", src);
+    } else if (bsp_cpu_temperature(&t_c) != 0 || bsp_supply_voltage(&v_dda) != 0) {
+        BSP_LOGW("CPU-Sensor: Messung fehlgeschlagen");
+    } else {
+        char ts[16], vs[16];
+        bsp_format_float(ts, sizeof ts, t_c, 1);
+        bsp_format_float(vs, sizeof vs, v_dda, 2);
+        BSP_LOGI("CPU: %s C, VDDA %s V", ts, vs);
+    }
 }

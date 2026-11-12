@@ -8,6 +8,10 @@ mkdir -p "$OUT"
 gcc -std=gnu11 -Wall -Wextra -o "$OUT/render_test" \
     -I tests/host/stubs -I bsp/include -I app/src \
     tests/host/render_test.c tests/host/fake_lcd.c \
-    bsp/src/bsp_console.c bsp/src/bsp_gfx.c bsp/src/bsp_font.c app/src/ui_render.c
+    bsp/src/bsp_console.c bsp/src/bsp_gfx.c bsp/src/bsp_font.c app/src/ui_render.c bsp/src/bsp_util.c
 "$OUT/render_test"
 python3 tests/host/topng.py
+
+# Rechentests (Sensor-Umrechnung, Zahlenformatierung)
+gcc -std=gnu11 -Wall -Wextra -o "$OUT/unit_test" -I bsp/include tests/host/unit_test.c bsp/src/bsp_util.c -lm
+"$OUT/unit_test"

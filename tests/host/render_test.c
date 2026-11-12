@@ -40,7 +40,7 @@ int main(void)
     ui_render_tabs(UI_PAGE_SYSTEM);
     ui_system_t s = {0};
     s.touch_ok = 1; s.qspi_ok = 1; s.audio_ok = 1; s.button_ok = 1; s.sdram_mb = 8; s.qspi_mb = 16;
-    s.uptime_s = 4711; s.heap_free = 71 * 1024; s.heap_min = 66 * 1024; s.heap_total = 96 * 1024; s.cpu_percent = 7;
+    s.sensor_ok = 1; s.cpu_temp_c = 41.26f; s.vdda_v = 3.31f; s.uptime_s = 4711; s.heap_free = 71 * 1024; s.heap_min = 66 * 1024; s.heap_total = 96 * 1024; s.cpu_percent = 7;
     s.task_count = 7;
     const struct { const char *n; int p, st, c; } t[7] = {
         {"Tmr Svc", 6, 480, 0}, {"audio", 3, 700, 4}, {"touch", 2, 380, 1}, {"ui", 2, 650, 1},
@@ -52,7 +52,7 @@ int main(void)
     snap("3_system");
 
     /* Peripherie-Fehler */
-    s.audio_ok = 0; s.qspi_ok = 0; s.cpu_percent = 91; s.has_sd = 1;
+    s.audio_ok = 0; s.qspi_ok = 0; s.cpu_temp_c = 88.4f; s.cpu_percent = 91; s.has_sd = 1;
     ui_render_system(&s);
     snap("4_system_fehler");
 

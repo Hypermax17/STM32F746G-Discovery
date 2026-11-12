@@ -13,6 +13,7 @@ extern "C" {
 
 /* ---- Modulauswahl ------------------------------------------------------- */
 #define HAL_MODULE_ENABLED
+#define HAL_ADC_MODULE_ENABLED
 #define HAL_CORTEX_MODULE_ENABLED
 #define HAL_DMA_MODULE_ENABLED
 #define HAL_FLASH_MODULE_ENABLED
@@ -55,6 +56,7 @@ extern "C" {
 #define PREFETCH_ENABLE          1U
 #define ART_ACCELERATOR_ENABLE   1U
 
+#define USE_HAL_ADC_REGISTER_CALLBACKS    0U
 #define USE_HAL_I2C_REGISTER_CALLBACKS    0U
 #define USE_HAL_LTDC_REGISTER_CALLBACKS   0U
 #define USE_HAL_QSPI_REGISTER_CALLBACKS   0U
@@ -78,6 +80,9 @@ extern "C" {
 #endif
 #ifdef HAL_FLASH_MODULE_ENABLED
 #include "stm32f7xx_hal_flash.h"
+#endif
+#ifdef HAL_ADC_MODULE_ENABLED
+#include "stm32f7xx_hal_adc.h"
 #endif
 #ifdef HAL_SDRAM_MODULE_ENABLED
 #include "stm32f7xx_hal_sdram.h"
