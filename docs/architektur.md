@@ -102,7 +102,7 @@ und zeigt die aktuelle Position rechts in der Statuszeile.
 (20 ms, Pegelwechsel gegenueber dem zuletzt akzeptierten Zustand) und legt `PRESSED`/`RELEASED`-Ereignisse mit
 Zeitstempel in eine Queue; Tasks lesen sie mit `bsp_button_get_event()`.
 
-App: `button_task` loggt kurze und lange Druecke (>= 1 s). Ein kurzer Druck wechselt das Blinktempo von LD1
+App: `button_task` loggt kurze Druecke; ein Druck von 1..3 s gibt eine Audio-Diagnose aus (SAI-/DMA-Zustand, Codec-Register), >= 3 s startet den QSPI-Schreibtest. Ein kurzer Druck wechselt das Blinktempo von LD1
 (500 ms <-> 100 ms), das der `heartbeat_task` ausfuehrt.
 
 ## QSPI-Flash
@@ -142,4 +142,5 @@ Mapping geprueft und der Sektor wieder geloescht. Das Log zeigt Zeiten und Fehle
 - **App:** `audio_task` spielt beim Start 300 ms 440 Hz. Danach erzeugt eine Beruehrung einen Sinuston:
   X-Position = Tonhoehe (200..2000 Hz), Y-Position = Lautstaerke (oben laut). Loslassen blendet aus.
   Standard-Lautstaerke 70 % (Kopfhoerer-Verstaerker), maximaler Pegel ca. 37 % Vollaussteuerung.
+- **Diagnose:** Taster 1..3 s halten -> Log mit SAI-Takt, DMA-Halbpuffer pro Sekunde (Soll: je 100) und Codec-Registern.
 - **Nur Ausgabe:** Eingaenge (Mikrofone, Line-In) sind noch nicht implementiert.

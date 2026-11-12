@@ -36,6 +36,10 @@ void bsp_audio_release_buffer(int16_t *buf);
 int bsp_audio_set_volume(uint8_t percent);
 int bsp_audio_set_mute(int mute);
 
+/* Diagnose: gibt SAI-/DMA-Zustand (nach 1 s Messung) und wichtige Codec-Register im Log aus.
+ * Nur aus einer Task aufrufbar. */
+void bsp_audio_dump(void);
+
 /* Zaehler fuer verpasste Pufferhaelften (Task war zu langsam) und SAI-Fehler */
 uint32_t bsp_audio_underruns(void);
 uint32_t bsp_audio_errors(void);
