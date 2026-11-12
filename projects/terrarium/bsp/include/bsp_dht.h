@@ -45,6 +45,10 @@ const char *bsp_dht_pin_name(unsigned idx);
  * *temp_c und *hum_pct nur bei Erfolg gesetzt. */
 int bsp_dht_read(unsigned idx, float *temp_c, float *hum_pct);
 
+/* Diagnose des letzten Leseversuchs von Sensor idx: die 5 empfangenen Rohbytes und die Anzahl vollstaendig
+ * erfasster Bits (40 = vollstaendig). Hilft bei Pruefsummen- und Abbruchfehlern. */
+void bsp_dht_last_diag(unsigned idx, uint8_t raw[5], unsigned *bits_done);
+
 /* Fehlertext zu einem Rueckgabewert */
 const char *bsp_dht_error_text(int rc);
 

@@ -45,13 +45,25 @@ Hinweise:
 | Meldung | Bedeutung |
 |---|---|
 | keine Antwort (Verdrahtung?) | Sensor zieht die Leitung nach dem Startsignal nicht auf Low: Anschluss, Versorgung, Pull-up pruefen |
-| Signal abgebrochen | Telegramm bricht ab (Wackelkontakt, zu lange Leitung) |
-| Pruefsumme falsch | Bitfehler (Stoerung) |
+| Signal abgebrochen | Telegramm bricht nach `n` Bit ab (Wackelkontakt, zu lange Leitung, fehlender Pull-up) |
+| Pruefsumme falsch | Bitfehler (Stoerung); das Log zeigt dazu `[n Bit: xx xx xx xx xx]` = erfasste Bits und Rohbytes |
 | Wert ausser Bereich | Werte ausserhalb 0..100 % rF bzw. -40..85 Grad Celsius |
 
 - Der DHT11 misst mit 1 Grad bzw. 1 % Aufloesung; laut allgemeinem Datenblatt 0..50 Grad Celsius (+-2 K) und
   20..90 % rF (+-5 %). Die Chiptemperatur (MCU) ist **nicht** die Umgebungstemperatur.
 - DHT22/AM2302: mit `-DBSP_DHT_TYPE=22` uebersetzen (Aufloesung 0,1; Skala -20..60 Grad Celsius).
+
+Bei Fehlern wird die Messung einmal wiederholt (der Treiber wartet dafuer den Mindestabstand ab); nur ein dauerhafter
+Fehler erscheint im Log. Ein Fehler mit `[40 Bit: ...]` und falscher Pruefsumme deutet auf Stoerungen oder einen zu
+langsamen Pull-up, ein Abbruch mit wenigen Bits auf die Leitung oder die Versorgung.
+
+### Messprinzip (Einzeldraht)
+
+Der Mikrocontroller zieht die Leitung >= 18 ms nach Masse und laesst los; die Leitung steigt dann ueber den Pull-up
+an (Anstiegszeit, je nach Widerstand und Leitung einige us). Erst danach antwortet der Sensor mit 80 us Low und 80 us High,
+gefolgt von 40 Bits (je 50 us Low, dann High 26 us = 0 bzw. 70 us = 1). Gemessen wird mit dem Zyklenzaehler des
+Prozessors (216 Schritte pro us); waehrend des ca. 4 ms langen Telegramms sind Interrupts mit FreeRTOS-Prioritaet gesperrt.
+Die Sensoren werden nacheinander gelesen, nie gleichzeitig.
 
 ### Tests
 

@@ -23,6 +23,7 @@ static dht_sensor_t s_sensor[BSP_DHT_COUNT] = {
     { GPIOG, GPIO_PIN_6, "D2", 0 },
 };
 
+static struct { uint8_t raw[5]; unsigned bits; } s_diag[BSP_DHT_COUNT];
 static SemaphoreHandle_t s_mutex;
 static int s_ready;
 
@@ -99,11 +100,16 @@ int bsp_dht_read(unsigned idx, float *temp_c, float *hum_pct)
     /* Loslassen und Telegramm erfassen; Interrupts mit FreeRTOS-Prioritaet duerfen die Messung nicht stoeren */
     const dht_io_t io = { io_pin, io_cycles, SystemCoreClock / 1000000U, sn };
     uint8_t bytes[5];
+    unsigned bits = 0;
     taskENTER_CRITICAL();
     sn->port->BSRR = sn->pin;
-    int rc = dht_capture(&io, bytes);
+    int rc = dht_capture(&io, bytes, &bits);
     taskEXIT_CRITICAL();
     sn->last_ms = HAL_GetTick();
+    for (unsigned i = 0; i < 5; i++) {
+        s_diag[idx].raw[i] = bytes[i];
+    }
+    s_diag[idx].bits = bits;
 
     if (rc == DHT_OK) {
         float t = 0.0f, h = 0.0f;
@@ -117,6 +123,16 @@ int bsp_dht_read(unsigned idx, float *temp_c, float *hum_pct)
         xSemaphoreGive(s_mutex);
     }
     return rc;
+}
+
+void bsp_dht_last_diag(unsigned idx, uint8_t raw[5], unsigned *bits_done)
+{
+    for (unsigned i = 0; i < 5; i++) {
+        raw[i] = (idx < BSP_DHT_COUNT) ? s_diag[idx].raw[i] : 0U;
+    }
+    if (bits_done != NULL) {
+        *bits_done = (idx < BSP_DHT_COUNT) ? s_diag[idx].bits : 0U;
+    }
 }
 
 const char *bsp_dht_error_text(int rc)

@@ -16,7 +16,8 @@
 #define DHT_ERR_CHECKSUM      (-3)
 #define DHT_ERR_RANGE         (-4)    /* Werte ausserhalb des Messbereichs (Stoerung) */
 
-#define DHT_BIT_THRESHOLD_US  48U     /* High-Zeit darueber = 1, darunter = 0 (Mitte zwischen 26/28 und 70 us) */
+#define DHT_BIT_THRESHOLD_US  42U     /* High-Zeit darueber = 1, darunter = 0. Leicht unter der Mitte (26..28 / 70 us), weil ein
+                                         langsamer Anstieg der Leitung die gemessene High-Zeit verkuerzt */
 
 typedef struct {
     int      (*pin)(void *ctx);       /* aktueller Pegel der Datenleitung (0/1) */
@@ -46,10 +47,18 @@ static inline int dht_wait(const dht_io_t *io, int level, uint32_t timeout_us, u
 }
 
 /* Erfasst die Antwort des Sensors; aufzurufen unmittelbar nach dem Loslassen der Leitung (Startsignal beendet).
- * Rueckgabe DHT_OK oder DHT_ERR_NO_RESPONSE / DHT_ERR_TIMEOUT; bytes = 5 Datenbytes. */
-static inline int dht_capture(const dht_io_t *io, uint8_t bytes[5])
+ * Rueckgabe DHT_OK oder DHT_ERR_NO_RESPONSE / DHT_ERR_TIMEOUT; bytes = 5 Datenbytes (bei Fehlern soweit erfasst),
+ * *bits_done (optional) = Anzahl vollstaendig erfasster Bits (0..40) fuer die Fehlerdiagnose. */
+static inline int dht_capture(const dht_io_t *io, uint8_t bytes[5], unsigned *bits_done)
 {
+    if (bits_done != NULL) {
+        *bits_done = 0;
+    }
     uint32_t high_us = 0;
+    /* Nach dem Loslassen liegt die Leitung noch auf Low (eigenes Startsignal) und steigt ueber den Pull-up erst
+     * nach der Anstiegszeit an. Zuerst auf dieses High warten - sonst wird das eigene Low als Antwort des Sensors
+     * missverstanden und alle folgenden Pulse sind um eine Flanke verschoben. */
+    if (dht_wait(io, 1, 200, NULL) != 0) return DHT_ERR_TIMEOUT;        /* bleibt Low: Kurzschluss / kein Pull-up */
     if (dht_wait(io, 0, 100, NULL) != 0) return DHT_ERR_NO_RESPONSE;    /* Sensor antwortet nach 20..40 us */
     if (dht_wait(io, 1, 120, NULL) != 0) return DHT_ERR_TIMEOUT;        /* Ende der 80 us Low-Phase */
     if (dht_wait(io, 0, 120, NULL) != 0) return DHT_ERR_TIMEOUT;        /* Ende der 80 us High-Phase */
@@ -63,6 +72,9 @@ static inline int dht_capture(const dht_io_t *io, uint8_t bytes[5])
         bytes[i / 8U] = (uint8_t)(bytes[i / 8U] << 1);
         if (high_us > DHT_BIT_THRESHOLD_US) {
             bytes[i / 8U] |= 1U;
+        }
+        if (bits_done != NULL) {
+            *bits_done = i + 1U;
         }
     }
     return DHT_OK;
