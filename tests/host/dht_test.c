@@ -16,6 +16,7 @@ typedef struct {
     double  start_us;                   /* Zeitpunkt, an dem die Leitung losgelassen wurde */
 } sim_t;
 
+static double g_rise_us = 4.0;          /* Anstiegszeit der Leitung nach dem Loslassen (Pull-up, Leitungskapazitaet) */
 static double g_clock_us;               /* gemeinsame virtuelle Zeit (der Zyklenzaehler ist fuer alle Sensoren gleich) */
 
 static void seg_reset(sim_t *s) { s->nseg = 0; s->start_us = g_clock_us; }
@@ -41,7 +42,8 @@ static double jitter(double j) { return ((double)rand() / RAND_MAX * 2.0 - 1.0) 
 static void build_frame(sim_t *s, const uint8_t b[5], double resp_us, double j, int stop_bits)
 {
     seg_reset(s);
-    seg_add(s, resp_us, 1);                             /* Pull-up, Sensor noch still */
+    seg_add(s, g_rise_us, 0);                           /* nach dem Loslassen liegt die Leitung noch Low (Anstiegszeit) */
+    seg_add(s, resp_us > g_rise_us ? resp_us - g_rise_us : 0.0, 1);   /* Pull-up, Sensor noch still */
     seg_add(s, 80 + jitter(j), 0);
     seg_add(s, 80 + jitter(j), 1);
     for (int i = 0; i < 40; i++) {
@@ -74,25 +76,25 @@ int main(void)
     /* DHT11: 55 % rF, 24 Grad Celsius */
     frame(f, 55, 0, 24, 0);
     build_frame(&S1, f, 30, 0, 40);
-    CHECK(dht_capture(&IO, got) == DHT_OK && memcmp(f, got, 5) == 0, "DHT11 Telegramm erfasst");
+    CHECK(dht_capture(&IO, got, NULL) == DHT_OK && memcmp(f, got, 5) == 0, "DHT11 Telegramm erfasst");
     CHECK(dht_decode(got, 11, &t, &h) == DHT_OK && t == 24.0f && h == 55.0f, "DHT11 decodiert: 24 C, 55 %");
 
     /* DHT11 mit Nachkommastelle (neuere Module): 31,4 C, 47,0 % */
     frame(f, 47, 0, 31, 4);
     build_frame(&S1, f, 25, 0, 40);
-    dht_capture(&IO, got);
+    dht_capture(&IO, got, NULL);
     CHECK(dht_decode(got, 11, &t, &h) == DHT_OK && t > 31.39f && t < 31.41f && h == 47.0f, "DHT11 mit Dezimalstelle: 31.4 C");
 
     /* DHT22: 65,2 % rF, 35,1 Grad Celsius */
     frame(f, 0x02, 0x8C, 0x01, 0x5F);
     build_frame(&S1, f, 35, 0, 40);
-    dht_capture(&IO, got);
+    dht_capture(&IO, got, NULL);
     CHECK(dht_decode(got, 22, &t, &h) == DHT_OK && t > 35.09f && t < 35.11f && h > 65.19f && h < 65.21f, "DHT22 decodiert: 35.1 C, 65.2 %");
 
     /* DHT22 negative Temperatur: -10,1 C */
     frame(f, 0x02, 0x8C, 0x80, 0x65);
     build_frame(&S1, f, 30, 0, 40);
-    dht_capture(&IO, got);
+    dht_capture(&IO, got, NULL);
     CHECK(dht_decode(got, 22, &t, &h) == DHT_OK && t > -10.11f && t < -10.09f, "DHT22 negative Temperatur: -10.1 C");
 
     /* Robustheit: 2000 zufaellige Telegramme mit +-6 us Zeitabweichung und verschiedenen Antwortzeiten */
@@ -101,9 +103,16 @@ int main(void)
     for (int n = 0; n < 2000; n++) {
         frame(f, (uint8_t)(rand() % 100), 0, (uint8_t)(rand() % 50), 0);
         build_frame(&S1, f, 20 + rand() % 21, 6, 40);
-        if (dht_capture(&IO, got) != DHT_OK || memcmp(f, got, 5) != 0) bad++;
+        if (dht_capture(&IO, got, NULL) != DHT_OK || memcmp(f, got, 5) != 0) bad++;
     }
     CHECK(bad == 0, "2000 zufaellige Telegramme mit Zeitjitter +-6 us fehlerfrei");
+
+    /* schwacher Pull-up / lange Leitung: Anstiegszeit 15 us */
+    g_rise_us = 15.0;
+    frame(f, 55, 0, 24, 0);
+    build_frame(&S1, f, 35, 0, 40);
+    CHECK(dht_capture(&IO, got, NULL) == DHT_OK && memcmp(f, got, 5) == 0, "langsamer Anstieg (15 us): Telegramm korrekt erfasst");
+    g_rise_us = 4.0;
 
     /* Zwei Sensoren an zwei Pins: jeder Kontext liefert sein eigenes Telegramm, ein stummer Pin stoert den anderen nicht */
     uint8_t fa[5], fb[5];
@@ -112,26 +121,29 @@ int main(void)
     build_frame(&S1, fa, 30, 3, 40);
     build_frame(&S2, fb, 28, 3, 40);
     uint8_t ga[5], gb[5];
-    int ra = dht_capture(&IO1, ga);
+    int ra = dht_capture(&IO1, ga, NULL);
     build_frame(&S2, fb, 28, 3, 40);                    /* Sensor 2 wird danach (anderer Zeitpunkt) abgefragt */
-    int rb = dht_capture(&IO2, gb);
+    int rb = dht_capture(&IO2, gb, NULL);
     CHECK(ra == DHT_OK && rb == DHT_OK && memcmp(fa, ga, 5) == 0 && memcmp(fb, gb, 5) == 0,
           "zwei Sensoren (zwei Pins) liefern jeweils ihr eigenes Telegramm");
-    seg_reset(&S1); seg_add(&S1, 1e9, 1);               /* Sensor 1 stumm */
-    build_frame(&S2, fb, 30, 3, 40);
-    CHECK(dht_capture(&IO1, ga) == DHT_ERR_NO_RESPONSE && dht_capture(&IO2, gb) == DHT_OK && memcmp(fb, gb, 5) == 0,
+    seg_reset(&S1); seg_add(&S1, g_rise_us, 0); seg_add(&S1, 1e9, 1);   /* Sensor 1 stumm */
+    const int r1 = dht_capture(&IO1, ga, NULL);
+    build_frame(&S2, fb, 30, 3, 40);                    /* Sensor 2 wird danach abgefragt */
+    const int r2 = dht_capture(&IO2, gb, NULL);
+    CHECK(r1 == DHT_ERR_NO_RESPONSE && r2 == DHT_OK && memcmp(fb, gb, 5) == 0,
           "Sensor 1 stumm: Sensor 2 wird trotzdem korrekt gelesen");
 
     /* Fehlerfaelle */
-    seg_reset(&S1); seg_add(&S1, 1e9, 1);
-    CHECK(dht_capture(&IO, got) == DHT_ERR_NO_RESPONSE, "kein Sensor: DHT_ERR_NO_RESPONSE");
+    seg_reset(&S1); seg_add(&S1, g_rise_us, 0); seg_add(&S1, 1e9, 1);
+    CHECK(dht_capture(&IO, got, NULL) == DHT_ERR_NO_RESPONSE, "kein Sensor: DHT_ERR_NO_RESPONSE");
     seg_reset(&S1); seg_add(&S1, 1e9, 0);
-    CHECK(dht_capture(&IO, got) == DHT_ERR_TIMEOUT, "Leitung dauerhaft Low: DHT_ERR_TIMEOUT");
+    CHECK(dht_capture(&IO, got, NULL) == DHT_ERR_TIMEOUT, "Leitung dauerhaft Low: DHT_ERR_TIMEOUT");
     frame(f, 55, 0, 24, 0);
     build_frame(&S1, f, 30, 0, 17);
-    CHECK(dht_capture(&IO, got) == DHT_ERR_TIMEOUT, "Telegramm bricht nach 17 Bits ab: DHT_ERR_TIMEOUT");
+    unsigned nb = 99;
+    CHECK(dht_capture(&IO, got, &nb) == DHT_ERR_TIMEOUT && nb == 16, "Telegramm bricht im 17. Bit ab: DHT_ERR_TIMEOUT, 16 vollstaendige Bits gemeldet");
     build_frame(&S1, f, 150, 0, 40);
-    CHECK(dht_capture(&IO, got) == DHT_ERR_NO_RESPONSE, "Antwort erst nach 150 us: zu spaet");
+    CHECK(dht_capture(&IO, got, NULL) == DHT_ERR_NO_RESPONSE, "Antwort erst nach 150 us: zu spaet");
 
     frame(f, 55, 0, 24, 0); f[4] ^= 1;
     CHECK(dht_decode(f, 11, &t, &h) == DHT_ERR_CHECKSUM, "falsche Pruefsumme erkannt");

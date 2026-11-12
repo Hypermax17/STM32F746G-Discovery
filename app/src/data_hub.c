@@ -42,7 +42,15 @@ static void log_dht_state(unsigned idx, int rc, float t, float h)
         bsp_format_float(hs, sizeof hs, h, BSP_DHT_DECIMALS);
         BSP_LOGI("%s %u (%s): %s C, %s %%", BSP_DHT_NAME, idx + 1U, bsp_dht_pin_name(idx), ts, hs);
     } else {
-        BSP_LOGW("%s %u (%s): %s", BSP_DHT_NAME, idx + 1U, bsp_dht_pin_name(idx), bsp_dht_error_text(rc));
+        uint8_t raw[5];
+        unsigned bits;
+        bsp_dht_last_diag(idx, raw, &bits);
+        if (rc == DHT_ERR_NO_RESPONSE) {
+            BSP_LOGW("%s %u (%s): %s", BSP_DHT_NAME, idx + 1U, bsp_dht_pin_name(idx), bsp_dht_error_text(rc));
+        } else {   /* mit Rohdaten: erfasste Bits und Bytes */
+            BSP_LOGW("%s %u (%s): %s [%u Bit: %02X %02X %02X %02X %02X]", BSP_DHT_NAME, idx + 1U,
+                     bsp_dht_pin_name(idx), bsp_dht_error_text(rc), bits, raw[0], raw[1], raw[2], raw[3], raw[4]);
+        }
     }
 }
 
@@ -53,7 +61,10 @@ static void sensor_task(void *arg)
     for (;;) {
         data_sample_t s = {0};
         for (unsigned i = 0; i < DATA_HUB_SENSORS; i++) {
-            const int rc = bsp_dht_read(i, &s.temp_c[i], &s.hum_pct[i]);   /* blockiert bis zu ~1,1 s (Mindestabstand) */
+            int rc = bsp_dht_read(i, &s.temp_c[i], &s.hum_pct[i]);        /* blockiert bis zu ~1,1 s (Mindestabstand) */
+            if (rc == DHT_ERR_TIMEOUT || rc == DHT_ERR_CHECKSUM || rc == DHT_ERR_RANGE) {
+                rc = bsp_dht_read(i, &s.temp_c[i], &s.hum_pct[i]);        /* gelegentliche Bitfehler: einmal wiederholen */
+            }
             s.ok[i] = (uint8_t)(rc == DHT_OK);
             log_dht_state(i, rc, s.temp_c[i], s.hum_pct[i]);
         }
