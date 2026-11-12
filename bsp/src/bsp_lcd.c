@@ -15,6 +15,7 @@
 #define LCD_BL_PIN    GPIO_PIN_3
 
 static LTDC_HandleTypeDef hltdc;
+static volatile uint32_t s_shown_fb = BSP_LCD_FB0_ADDR;
 
 static void lcd_gpio_init(void)
 {
@@ -60,7 +61,27 @@ static void lcd_gpio_init(void)
 
 uint16_t *bsp_lcd_framebuffer(void)
 {
-    return (uint16_t *)BSP_LCD_FB_ADDR;
+    return (uint16_t *)s_shown_fb;
+}
+
+int bsp_lcd_show_buffer(uint32_t fb_addr)
+{
+    if (fb_addr == s_shown_fb) {
+        return 0;
+    }
+    HAL_LTDC_SetAddress_NoReload(&hltdc, fb_addr, LTDC_LAYER_1);
+    if (HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING) != HAL_OK) {
+        return -1;
+    }
+    /* Das Register wird im naechsten Austastintervall uebernommen: darauf warten */
+    uint32_t t0 = HAL_GetTick();
+    while ((LTDC->SRCR & (LTDC_SRCR_VBR | LTDC_SRCR_IMR)) != 0U) {
+        if (HAL_GetTick() - t0 > 100U) {
+            return -2;
+        }
+    }
+    s_shown_fb = fb_addr;
+    return 0;
 }
 
 void bsp_lcd_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t color)
@@ -139,7 +160,7 @@ int bsp_lcd_init(void)
     layer.WindowY0 = 0;
     layer.WindowY1 = BSP_LCD_HEIGHT;
     layer.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
-    layer.FBStartAdress = BSP_LCD_FB_ADDR;
+    layer.FBStartAdress = BSP_LCD_FB0_ADDR;
     layer.Alpha = 255;
     layer.Alpha0 = 0;
     layer.Backcolor.Blue = 0;

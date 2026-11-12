@@ -4,7 +4,8 @@
  *  DTCM   0x20000000  64 KB   (Main-Stack / MSP)
  *  RAM    0x20010000  256 KB  (SRAM1 240 KB + SRAM2 16 KB, zusammenhaengend)
  *  SDRAM  0xC0000000  8 MB    (16-bit Bus an 128-Mbit-Chip -> 8 MB nutzbar)
- *         davon 0xC0000000..0xC007FFFF (512 KB) fuer den LCD-Framebuffer reserviert
+ *         davon 0xC0000000..0xC007FFFF (512 KB) fuer zwei LCD-Framebuffer reserviert,
+ *         0xC0080000..0xC017FFFF (1 MB) fuer den Speicher-Pool der UI-Bibliothek (LVGL)
  */
 ENTRY(Reset_Handler)
 
@@ -16,8 +17,9 @@ MEMORY
   FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 1024K
   DTCM  (xrw) : ORIGIN = 0x20000000, LENGTH = 64K
   RAM   (xrw) : ORIGIN = 0x20010000, LENGTH = 256K
-  SDRAM_FB (rw) : ORIGIN = 0xC0000000, LENGTH = 512K   /* LCD-Framebuffer (bsp_lcd) */
-  SDRAM (xrw) : ORIGIN = 0xC0080000, LENGTH = 7680K
+  SDRAM_FB (rw) : ORIGIN = 0xC0000000, LENGTH = 512K   /* 2 LCD-Framebuffer a 255 KB (bsp_lcd) */
+  SDRAM_UI (rw) : ORIGIN = 0xC0080000, LENGTH = 1M     /* Speicher-Pool der UI-Bibliothek LVGL (LV_MEM_ADR) */
+  SDRAM (xrw) : ORIGIN = 0xC0180000, LENGTH = 6656K
 }
 
 _estack = ORIGIN(DTCM) + LENGTH(DTCM);

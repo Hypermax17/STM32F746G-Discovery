@@ -1,6 +1,5 @@
 #include "touch_task.h"
-#include "app_status.h"
-#include "ui.h"
+#include "ui_port.h"
 #include "bsp.h"
 
 #include "FreeRTOS.h"
@@ -14,7 +13,6 @@ static void touch_task(void *arg)
 {
     (void)arg;
     TickType_t last = xTaskGetTickCount();
-    uint8_t prev_count = 0;
     unsigned errors = 0;
 
     for (;;) {
@@ -24,22 +22,7 @@ static void touch_task(void *arg)
                 BSP_LOGI("Touch: I2C wieder ok");
                 errors = 0;
             }
-            if (st.count != prev_count) {
-                if (st.count == 0U) {
-                    BSP_LOGI("Touch: losgelassen");
-                } else {
-                    BSP_LOGI("Touch(%u) %u,%u raw %u,%u", (unsigned)st.count,
-                             (unsigned)st.point[0].x, (unsigned)st.point[0].y,
-                             (unsigned)st.point[0].raw_x, (unsigned)st.point[0].raw_y);
-                }
-                prev_count = st.count;
-            }
-            if (st.count != 0U) {
-                app_status_set_touch(1, st.point[0].x, st.point[0].y);
-            } else {
-                app_status_set_touch(0, 0, 0);
-            }
-            ui_post_touch(&st);
+            ui_port_touch_update(&st);
         } else if (errors++ == 0U) {
             BSP_LOGE("Touch: I2C-Fehler");
         }

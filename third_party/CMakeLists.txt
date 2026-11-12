@@ -49,3 +49,18 @@ target_include_directories(freertos SYSTEM PUBLIC
     ${CMAKE_SOURCE_DIR}/app/config)       # FreeRTOSConfig.h
 target_link_libraries(freertos PUBLIC cmsis)
 target_compile_options(freertos PRIVATE -w)
+
+# ---- LVGL (Oberflaechen-Bibliothek) ----------------------------------------------
+# Konfiguration: ui/config/lv_conf.h. Treiber und Zeichen-Backends anderer Hersteller werden nicht gebaut.
+set(LV ${TP}/lvgl)
+file(GLOB_RECURSE LVGL_SOURCES CONFIGURE_DEPENDS ${LV}/src/*.c)
+list(FILTER LVGL_SOURCES EXCLUDE REGEX "/src/drivers/")
+list(FILTER LVGL_SOURCES EXCLUDE REGEX "/src/draw/(nxp|renesas|sdl|opengles|vg_lite|nema_gfx|dma2d|espressif|eve)/")
+list(FILTER LVGL_SOURCES EXCLUDE REGEX "/src/draw/sw/(arm2d)/")
+list(FILTER LVGL_SOURCES EXCLUDE REGEX "/src/draw/sw/blend/(arm2d|helium|neon)/")
+add_library(lvgl STATIC ${LVGL_SOURCES})
+target_include_directories(lvgl SYSTEM PUBLIC
+    ${LV}
+    ${CMAKE_SOURCE_DIR}/ui/config)
+target_compile_definitions(lvgl PUBLIC LV_CONF_INCLUDE_SIMPLE)
+target_compile_options(lvgl PRIVATE -w)

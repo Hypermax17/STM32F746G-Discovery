@@ -6,7 +6,9 @@
 /* 4,3"-Display RK043FN48H, 480x272, RGB565, Framebuffer im SDRAM (Layer 1) */
 #define BSP_LCD_WIDTH  480U
 #define BSP_LCD_HEIGHT 272U
-#define BSP_LCD_FB_ADDR 0xC0000000UL   /* siehe MEMORY SDRAM_FB im Linker-Script */
+#define BSP_LCD_FB0_ADDR 0xC0000000UL   /* zwei Framebuffer, siehe MEMORY SDRAM_FB im Linker-Script */
+#define BSP_LCD_FB1_ADDR 0xC0040000UL
+#define BSP_LCD_FB_ADDR  BSP_LCD_FB0_ADDR
 
 /* RGB565-Farben */
 #define BSP_RGB565(r, g, b) ((uint16_t)((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | (((b) & 0xF8) >> 3)))
@@ -21,7 +23,12 @@
 /* Voraussetzung: SDRAM ist initialisiert. Rueckgabe 0 = ok. */
 int bsp_lcd_init(void);
 
+/* Der gerade ANGEZEIGTE Framebuffer (dort zeichnen Konsole, Fehleranzeige und bsp_gfx). */
 uint16_t *bsp_lcd_framebuffer(void);
+
+/* Schaltet die Anzeige auf einen anderen Framebuffer um (FB0/FB1). Wartet, bis der LTDC im vertikalen
+ * Austastintervall umgeschaltet hat (kein Tearing). Wird von der UI-Bibliothek (LVGL) benutzt. */
+int bsp_lcd_show_buffer(uint32_t fb_addr);
 void bsp_lcd_fill(uint16_t color);
 void bsp_lcd_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t color);
 void bsp_lcd_backlight(int on);

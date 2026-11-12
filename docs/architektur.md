@@ -20,7 +20,7 @@ Schlaegt ein Schritt vor der Konsole fehl, zeigt LD1 einen Blinkcode.
 | DTCM | `0x20000000`, 64 KB | Main-Stack (MSP) |
 | SRAM1+2 | `0x20010000`, 256 KB | `.data`/`.bss`, FreeRTOS-Heap (96 KB) |
 | QSPI-Flash | `0x90000000`, 16 MB | Memory-Mapped (nur lesbar), per MPU gesperrt solange das Mapping aus ist |
-| SDRAM | `0xC0000000`, 8 MB | `0xC0000000`: Framebuffer (RGB565, 255 KB, 512 KB reserviert); ab `0xC0080000` frei (`.sdram`) |
+| SDRAM | `0xC0000000`, 8 MB | `0xC0000000` / `0xC0040000`: zwei Framebuffer (RGB565, je 255 KB); `0xC0080000`: LVGL-Pool (1 MB); ab `0xC0180000` frei (`.sdram`) |
 
 Hinweis: Der SDRAM-Chip hat 128 Mbit (16 MB), ist am STM32F746 aber nur mit 16 Datenleitungen angebunden, daher sind **8 MB** nutzbar.
 
@@ -145,21 +145,10 @@ Mapping geprueft und der Sektor wieder geloescht. Das Log zeigt Zeiten und Fehle
 - **Diagnose:** Taster 1..3 s halten -> Log mit SAI-Takt, DMA-Halbpuffer pro Sekunde (Soll: je 100) und Codec-Registern.
 - **Nur Ausgabe:** Eingaenge (Mikrofone, Line-In) sind noch nicht implementiert.
 
-## Oberflaeche (Schritt 8)
+## Oberflaeche
 
-`app/src/ui.c` (Task `ui`) verwaltet drei Seiten; gezeichnet wird in `ui_render.c` (reine Darstellung).
-Touch-Zustaende kommen ueber eine Queue vom `touch`-Task, Seitenwechsel-Wuensche vom `button`-Task.
-Wird die Seite LOG verlassen, blendet die UI die Konsole aus und beschreibt die Zeilen 1..15 selbst;
-neue Log-Meldungen landen weiter im Ringpuffer. Bei einem Fehler (`bsp_panic`, Fault-Handler) uebernimmt die
-Konsole wieder den ganzen Bildschirm (Zeilen 0..15).
-
-CPU-Last und Tasks: FreeRTOS-Laufzeitstatistik mit dem DWT-Zyklenzaehler als Zeitbasis
-(`bsp_runtime_counter`, Zyklen / 256). Die Prozentwerte sind die Anteile seit der letzten Aktualisierung (500 ms).
-
-### Darstellung ohne Board pruefen
-
-`tests/host/run.sh` uebersetzt `bsp_console`, `bsp_gfx` und `ui_render` fuer den PC, rendert alle Seiten in
-einen Framebuffer und schreibt PNGs (Standard: `build/host-render/`). Hilfreich beim Aendern des Layouts.
+Siehe [ui.md](ui.md) (LVGL, Designs, Seiten). Die BSP-Konsole bleibt fuer Boot-Meldungen und die Fehleranzeige; sobald die
+Oberflaeche laeuft, wird sie ausgeblendet und speichert Meldungen nur noch im Ringpuffer (Seite LOG).
 
 ## Sensorik
 
