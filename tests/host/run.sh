@@ -15,3 +15,7 @@ python3 tests/host/topng.py
 # Rechentests (Sensor-Umrechnung, Zahlenformatierung)
 gcc -std=gnu11 -Wall -Wextra -o "$OUT/unit_test" -I bsp/include tests/host/unit_test.c bsp/src/bsp_util.c -lm
 "$OUT/unit_test"
+
+# DHT-Treiberkern (Projekt Terrarium): simulierter Sensor, Erfassung und Umrechnung
+gcc -std=gnu11 -Wall -Wextra -o "$OUT/dht_test" -I projects/terrarium/bsp/include tests/host/dht_test.c
+"$OUT/dht_test"
