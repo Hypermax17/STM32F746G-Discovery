@@ -12,6 +12,7 @@ typedef void (*ui_page_update_fn)(void);                                        
 
 typedef struct {
     const char       *name;       /* Text in der Navigation */
+    const char       *icon;       /* LVGL-Symbol (z. B. LV_SYMBOL_LIST) fuer die Seitenleiste */
     ui_page_create_fn create;
     ui_page_update_fn update;     /* darf NULL sein */
 } ui_page_def_t;
@@ -26,6 +27,7 @@ void ui_pages_next_design(unsigned idx);      /* Seite idx mit dem naechsten Des
 unsigned    ui_pages_count(void);
 unsigned    ui_pages_current(void);
 const char *ui_pages_name(unsigned idx);
+const char *ui_pages_icon(unsigned idx);
 const ui_design_t *ui_pages_design(unsigned idx);
 
 #endif

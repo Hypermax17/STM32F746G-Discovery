@@ -7,7 +7,7 @@ die Seiten der jeweiligen Anwendung in `app/src/pages/`.
 
 | Teil | Ort | Aufgabe |
 |---|---|---|
-| LVGL-Konfiguration | `ui/config/lv_conf.h` | aus der LVGL-Vorlage erzeugt; nur benoetigte Widgets, Schriften 12/14/16/20/28 und `unscii` (monospace), Speicherpool im SDRAM |
+| LVGL-Konfiguration | `ui/config/lv_conf.h` | aus der LVGL-Vorlage erzeugt; nur benoetigte Widgets, Schriften Montserrat 12/14/16/20/28/48, Speicherpool im SDRAM |
 | Anbindung ans Board | `ui/src/ui_port.c` | Display (zwei Vollbild-Puffer im SDRAM, Umschalten im vertikalen Austastintervall), Touch (Zeiger), Zeitbasis, Log, UI-Task |
 | Designs | `ui/src/ui_design.c` | Farben, Schriften, Rundungen und Navigationsstil als Datenstruktur `ui_design_t` |
 | Widget-Helfer | `ui/src/ui_widgets.c` | Seitengeruest mit Navigation, Karte, Label, Button, Status-Punkt, Tabelle, Diagramm |
@@ -25,19 +25,23 @@ Regeln:
 ## Die drei Designs (zum Vergleichen)
 
 Jede Seite startet absichtlich in einem anderen Design. Die Schaltflaeche **"Design X"** in der Navigation baut die
-aktuelle Seite mit dem naechsten Design neu auf (A -> B -> C -> A).
+aktuelle Seite mit dem naechsten Design neu auf (A -> B -> C -> A), sodass jede Seite in jedem Design angesehen werden kann.
 
-| Design | Seite beim Start | Stil | Navigation |
-|---|---|---|---|
-| **A** Dashboard dunkel | System | dunkles Blau, Karten mit Rundung, Akzent Cyan, Schrift Montserrat | Reiter oben |
-| **B** Flach hell | Messwerte | helles Grau/Weiss, flach, Akzent Blau, Schrift Montserrat | Leiste unten mit Akzentstrich |
-| **C** Terminal | Log | schwarz mit gruener Phosphorschrift, eckig, monospace (`unscii`) | Textzeile unten `[1] System ...` |
+| Design | Seite beim Start | Stil | Navigation | Layout |
+|---|---|---|---|---|
+| **A** Dashboard dunkel | System | dunkles Blau, Karten mit Rundung, Akzent Cyan | Reiter oben | Karten, Tabellen |
+| **B** Cockpit gruen | Messwerte | fast schwarzer Graphit mit Gruenstich, leuchtend gruener Akzent, Bernstein als zweite Farbe, kaum Rahmen | Seitenleiste links (Symbol + Name) | grosse Zahlen (48 px), runde Anzeigen, kompakte Tabellen |
+| **C** Glas violett | Log | Verlauf von Violett nach Nachtblau, durchscheinende Karten mit hellem Rand und Schatten, grosse Rundungen, Akzent Violett, 2. Kurve Rosa | Seitenleiste links | Karten, Tabellen |
+
+Ein Design besteht aus `ui_design_t` (Farben, Deckkraft, Schatten, Schriften, Navigationsstil) und einem **Layout-Stil**:
+`UI_LAYOUT_CARDS` nutzen A und C, `UI_LAYOUT_COCKPIT` (B) ordnet die Seiten System und Messwerte anders an.
+Die Seiten passen sich der Inhaltsgroesse an (`f.w`/`f.h`, 480x240 bei Reitern oben, 404x272 mit Seitenleiste).
 
 Umlaute und Sonderzeichen (Grad-Zeichen) fehlen in den eingebauten Schriften; die Texte sind daher ASCII ("Loeschen", "41.3 C").
 
 ## Seiten
 
-- **System:** Peripherie-Status (Punkt gruen/rot), CPU-Temperatur und VDDA, **Live-Tabelle** der Tasks (Prioritaet, freier Stack, CPU-Anteil), Test-Ton-Button.
+- **System:** Peripherie-Status (Punkt gruen/rot), CPU-Temperatur und VDDA, **Live-Tabelle** der Tasks (Prioritaet, freier Stack, CPU-Anteil), Test-Ton-Button. Im Cockpit-Layout: drei runde Anzeigen (CPU-Last, CPU-Temperatur, VDDA) und die vier aktivsten Tasks.
 - **Messwerte:** **Live-Diagramm** (2 Kurven mit eigener Y-Achse links/rechts, automatische Skalierung, 128 Punkte = ca. 2 min) und **Live-Tabelle** der letzten Messwerte, Buttons Pause/Loeschen.
 - **Log:** Meldungen mit Farbe nach Schwere, scrollbar per Wischen, Buttons Pause/Loeschen.
 

@@ -45,6 +45,11 @@ const char *ui_pages_name(unsigned idx)
     return (idx < s_count) ? s_defs[idx].name : "";
 }
 
+const char *ui_pages_icon(unsigned idx)
+{
+    return (idx < s_count && s_defs[idx].icon != NULL) ? s_defs[idx].icon : "";
+}
+
 const ui_design_t *ui_pages_design(unsigned idx)
 {
     return ui_designs[s_design[idx % MAX_PAGES]];
