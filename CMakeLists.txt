@@ -30,4 +30,5 @@ endif()
 add_subdirectory(third_party)   # CMSIS, HAL, FreeRTOS, LVGL
 add_subdirectory(bsp)           # Board-Support-Package (Treiber)
 add_subdirectory(ui)            # UI-Bibliothek (LVGL-Anbindung, Designs, Seitenverwaltung)
+add_subdirectory(projects/terrarium)   # projektabhaengiges BSP (zusaetzliche Hardware dieses Projekts)
 add_subdirectory(app)           # Applikation

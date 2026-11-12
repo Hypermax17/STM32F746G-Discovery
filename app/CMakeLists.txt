@@ -34,7 +34,7 @@ if(APP_FAULT_TEST)
         APP_FAULT_TEST_${_ft}=1
         APP_FAULT_TEST_NAME="${APP_FAULT_TEST}")
 endif()
-target_link_libraries(app PRIVATE ui bsp stm32_hal freertos lvgl m)
+target_link_libraries(app PRIVATE ui terrarium_bsp bsp stm32_hal freertos lvgl m)
 target_link_options(app PRIVATE
     -T${LINKER_SCRIPT}
     -Wl,-Map=$<TARGET_FILE_DIR:app>/stm32f746g_app.map
