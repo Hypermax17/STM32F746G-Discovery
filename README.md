@@ -40,6 +40,6 @@ Siehe [docs/flashen.md](docs/flashen.md).
 - [x] Schritt 3: Touchscreen
 - [x] Schritt 4: User-Button, LED
 - [x] Schritt 5: QSPI-Flash
-- [ ] Schritt 6: Audio
+- [x] Schritt 6: Audio
 - [ ] Schritt 7: Geruest fuer SD, USB OTG, Ethernet, Kamera
 - [ ] Schritt 8: Basisapplikation

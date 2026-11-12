@@ -22,6 +22,7 @@ extern "C" {
 #define HAL_PWR_MODULE_ENABLED
 #define HAL_QSPI_MODULE_ENABLED
 #define HAL_RCC_MODULE_ENABLED
+#define HAL_SAI_MODULE_ENABLED
 #define HAL_SDRAM_MODULE_ENABLED
 
 /* ---- Oszillatoren ------------------------------------------------------- */
@@ -57,6 +58,7 @@ extern "C" {
 #define USE_HAL_I2C_REGISTER_CALLBACKS    0U
 #define USE_HAL_LTDC_REGISTER_CALLBACKS   0U
 #define USE_HAL_QSPI_REGISTER_CALLBACKS   0U
+#define USE_HAL_SAI_REGISTER_CALLBACKS    0U
 #define USE_HAL_SDRAM_REGISTER_CALLBACKS  0U
 
 /* #define USE_FULL_ASSERT 1U */
@@ -91,6 +93,9 @@ extern "C" {
 #endif
 #ifdef HAL_QSPI_MODULE_ENABLED
 #include "stm32f7xx_hal_qspi.h"
+#endif
+#ifdef HAL_SAI_MODULE_ENABLED
+#include "stm32f7xx_hal_sai.h"
 #endif
 
 #ifdef USE_FULL_ASSERT

@@ -16,6 +16,7 @@
 #include "bsp_touch.h"
 #include "bsp_button.h"
 #include "bsp_qspi.h"
+#include "bsp_audio.h"
 
 void bsp_init(void);
 
