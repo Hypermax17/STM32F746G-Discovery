@@ -30,7 +30,8 @@ static void button_task(void *arg)
                 BSP_LOGI("Taste: %lu ms -> QSPI-Test", (unsigned long)held);
                 qspi_write_test();
             } else if (held >= LONG_PRESS_MS) {
-                BSP_LOGI("Taste: lang (%lu ms)", (unsigned long)held);
+                BSP_LOGI("Taste: lang (%lu ms) -> Audio-Diagnose", (unsigned long)held);
+                bsp_audio_dump();
             } else {
                 BSP_LOGI("Taste: kurz (%lu ms)", (unsigned long)held);
                 app_heartbeat_toggle_rate();

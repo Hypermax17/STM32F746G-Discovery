@@ -4,6 +4,8 @@
 
 #include <string.h>
 
+#include "bsp_log.h"
+
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
@@ -29,6 +31,8 @@
 #define WM_AIF1DAC2_FILTERS_1 0x422U
 #define WM_DAC1_LEFT_MIXER    0x601U
 #define WM_DAC1_RIGHT_MIXER   0x602U
+#define WM_DAC1_LEFT_VOL      0x610U
+#define WM_DAC1_RIGHT_VOL     0x611U
 #define WM_DAC2_LEFT_MIXER    0x604U
 #define WM_DAC2_RIGHT_MIXER   0x605U
 #define WM_ERRATA_102         0x102U
@@ -41,6 +45,8 @@
 static SAI_HandleTypeDef hsai;
 static DMA_HandleTypeDef hdma;
 static QueueHandle_t s_free_q;
+static volatile uint32_t s_half_cnt;
+static volatile uint32_t s_full_cnt;
 static volatile uint32_t s_underruns;
 static volatile uint32_t s_errors;
 static uint8_t s_volume = BSP_AUDIO_DEFAULT_VOLUME;
@@ -92,6 +98,9 @@ static int codec_init(uint16_t *id_out)
     err |= wm_write(WM_PWR_MGMT_5, 0x0303);
     err |= wm_write(WM_DAC1_LEFT_MIXER, 0x0001);
     err |= wm_write(WM_DAC1_RIGHT_MIXER, 0x0001);
+    /* DAC1-Lautstaerke 0 dB und Stummschaltung aufheben (nach dem Reset sind die DACs stumm) */
+    err |= wm_write(WM_DAC1_LEFT_VOL, 0x01C0);
+    err |= wm_write(WM_DAC1_RIGHT_VOL, 0x01C0);
     err |= wm_write(WM_DAC2_LEFT_MIXER, 0x0000);
     err |= wm_write(WM_DAC2_RIGHT_MIXER, 0x0000);
 
@@ -278,6 +287,28 @@ void bsp_audio_release_buffer(int16_t *buf)
     SCB_CleanDCache_by_Addr((uint32_t *)buf, (int32_t)(BSP_AUDIO_HALF_FRAMES * 2U * sizeof(int16_t)));
 }
 
+static uint16_t wm_read(uint16_t reg)
+{
+    uint16_t v = 0xFFFF;
+    (void)bsp_i2c3_reg16_read(CODEC_ADDR7, reg, &v);
+    return v;
+}
+
+void bsp_audio_dump(void)
+{
+    uint32_t h0 = s_half_cnt, f0 = s_full_cnt;
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    BSP_LOGI("SAI clk %lu CR1 %08lX", (unsigned long)HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SAI2),
+             (unsigned long)SAI2_Block_A->CR1);
+    BSP_LOGI("SAI SR %08lX DMA/s h%lu f%lu", (unsigned long)SAI2_Block_A->SR,
+             (unsigned long)(s_half_cnt - h0), (unsigned long)(s_full_cnt - f0));
+    BSP_LOGI("WM 01:%04X 05:%04X 2D:%04X", wm_read(0x01), wm_read(0x05), wm_read(0x2D));
+    BSP_LOGI("WM 1C:%04X 420:%04X 610:%04X", wm_read(0x1C), wm_read(0x420), wm_read(0x610));
+    BSP_LOGI("WM 110:%04X 111:%04X 54:%04X", wm_read(0x110), wm_read(0x111), wm_read(0x54));
+    BSP_LOGI("WM 200:%04X 208:%04X 210:%04X", wm_read(0x200), wm_read(0x208), wm_read(0x210));
+    BSP_LOGI("WM 300:%04X 601:%04X 4C:%04X", wm_read(0x300), wm_read(0x601), wm_read(0x4C));
+}
+
 uint32_t bsp_audio_underruns(void) { return s_underruns; }
 uint32_t bsp_audio_errors(void)    { return s_errors; }
 
@@ -294,12 +325,12 @@ static void half_done(int16_t *half)
 
 void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *h)
 {
-    if (h == &hsai) half_done(&s_dma_buf[0]);
+    if (h == &hsai) { s_half_cnt++; half_done(&s_dma_buf[0]); }
 }
 
 void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *h)
 {
-    if (h == &hsai) half_done(&s_dma_buf[BUF_SAMPLES / 2U]);
+    if (h == &hsai) { s_full_cnt++; half_done(&s_dma_buf[BUF_SAMPLES / 2U]); }
 }
 
 void HAL_SAI_ErrorCallback(SAI_HandleTypeDef *h)
