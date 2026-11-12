@@ -1,6 +1,6 @@
 #include "touch_task.h"
 #include "app_status.h"
-#include "audio_task.h"
+#include "ui.h"
 #include "bsp.h"
 
 #include "FreeRTOS.h"
@@ -36,11 +36,10 @@ static void touch_task(void *arg)
             }
             if (st.count != 0U) {
                 app_status_set_touch(1, st.point[0].x, st.point[0].y);
-                audio_task_set_touch(1, st.point[0].x, st.point[0].y);
             } else {
                 app_status_set_touch(0, 0, 0);
-                audio_task_set_touch(0, 0, 0);
             }
+            ui_post_touch(&st);
         } else if (errors++ == 0U) {
             BSP_LOGE("Touch: I2C-Fehler");
         }

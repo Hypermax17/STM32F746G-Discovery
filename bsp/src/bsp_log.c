@@ -60,7 +60,8 @@ void bsp_panic(const char *fmt, ...)
     va_end(ap);
 
     if (bsp_console_ready()) {
-        bsp_console_write_unlocked("\n*** PANIC ***\n", BSP_COLOR_RED);
+        bsp_console_clear_unlocked();
+        bsp_console_write_unlocked("*** PANIC ***\n", BSP_COLOR_RED);
         bsp_console_write_unlocked(msg, BSP_COLOR_RED);
         bsp_console_write_unlocked("\n", BSP_COLOR_RED);
     }

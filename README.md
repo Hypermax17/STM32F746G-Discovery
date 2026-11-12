@@ -28,6 +28,18 @@ Ergebnis in `build/release/app/`: `stm32f746g_app.bin`, `.hex`, `.elf`, `.map`.
 Liegt der Compiler nicht im `PATH`, die Umgebungsvariable `ARM_TOOLCHAIN_PATH` auf das `bin`-Verzeichnis setzen.
 Bei jedem Push baut GitHub Actions (`.github/workflows/build.yml`) die Applikation (`scripts/build_variants.sh`) und stellt sie als **ein** Artefakt `stm32f746g-hex` mit der `.hex`-Datei bereit.
 
+## Bedienung der Basisapplikation
+
+Oben im Display steht eine Tab-Leiste. Antippen oder ein kurzer Druck auf den User-Taster (B1) wechselt die Seite:
+
+| Seite | Inhalt |
+|---|---|
+| **SYSTEM** | Peripherie-Status (Display, SDRAM, Touch, QSPI, Audio, Taster; SD/USB/ETH/CAM = Geruest), Laufzeit, freier Heap, CPU-Last und Tasks (Prioritaet, freier Stack, CPU-Anteil) |
+| **TOUCH** | Zeichenflaeche fuer bis zu 5 Finger (Farbe je Finger); gleichzeitig Sinuston: X = Tonhoehe, Y = Lautstaerke. Erneutes Tippen auf den Tab TOUCH loescht die Zeichnung |
+| **LOG** | Meldungen des Systems (die Boot-Meldungen stehen hier) |
+
+Weitere Tasterfunktionen: 1..3 s halten = Audio-Diagnose im Log, >= 3 s = QSPI-Schreibtest.
+
 ## Flashen (STM32CubeProgrammer)
 
 Siehe [docs/flashen.md](docs/flashen.md).
@@ -42,4 +54,4 @@ Siehe [docs/flashen.md](docs/flashen.md).
 - [x] Schritt 5: QSPI-Flash
 - [x] Schritt 6: Audio
 - [x] Schritt 7: Geruest fuer SD, USB OTG, Ethernet, Kamera (`docs/optionale-module.md`)
-- [ ] Schritt 8: Basisapplikation
+- [x] Schritt 8: Basisapplikation (Seiten SYSTEM, TOUCH, LOG)

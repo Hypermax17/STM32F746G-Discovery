@@ -257,6 +257,11 @@ int bsp_audio_init(uint16_t *codec_id)
     return 0;
 }
 
+int bsp_audio_is_ready(void)
+{
+    return s_ready;
+}
+
 int bsp_audio_start(void)
 {
     if (!s_ready) return -1;

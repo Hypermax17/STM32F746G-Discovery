@@ -135,3 +135,17 @@ void TIM6_DAC_IRQHandler(void)
         HAL_IncTick();
     }
 }
+
+/* Zaehler fuer die FreeRTOS-Laufzeitstatistik: DWT-Zyklenzaehler (216 MHz) / 256 = 0,84 MHz */
+void bsp_runtime_counter_init(void)
+{
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->LAR = 0xC5ACCE55U;               /* Cortex-M7: Debug-Register entsperren */
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
+
+uint32_t bsp_runtime_counter(void)
+{
+    return DWT->CYCCNT >> 8;
+}

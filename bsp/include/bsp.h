@@ -9,6 +9,7 @@
 #include "bsp_led.h"
 #include "bsp_sdram.h"
 #include "bsp_lcd.h"
+#include "bsp_gfx.h"
 #include "bsp_console.h"
 #include "bsp_log.h"
 #include "bsp_fault.h"
