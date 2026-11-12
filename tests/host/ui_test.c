@@ -94,11 +94,11 @@ int main(void)
 {
     for (unsigned i = 0; i < NSAMPLES; i++) {
         g_hub[i].t_s = 600 + 2 * i;
-        g_hub[i].mcu_ok = 1;
-        g_hub[i].mcu_c = 38.0f + 0.04f * (float)i + 0.6f * sinf((float)i * 0.25f);
-        g_hub[i].dht_ok = (i % 17U) != 5U;                       /* gelegentlich eine fehlgeschlagene Messung */
-        g_hub[i].temp_c = (float)(int)(24.0f + 2.0f * sinf((float)i * 0.12f));       /* DHT11: ganze Grad */
-        g_hub[i].hum_pct = (float)(int)(55.0f + 8.0f * sinf((float)i * 0.09f + 1.0f));
+        for (unsigned k = 0; k < DATA_HUB_SENSORS; k++) {
+            g_hub[i].ok[k] = (k == 0U) ? ((i % 17U) != 5U) : 1U;       /* Sensor 1: gelegentlich eine fehlgeschlagene Messung */
+            g_hub[i].temp_c[k] = (float)(int)(24.0f + 3.0f * (float)k + 2.0f * sinf((float)i * (0.12f + 0.05f * (float)k)));
+            g_hub[i].hum_pct[k] = (float)(int)(55.0f - 10.0f * (float)k + 8.0f * sinf((float)i * 0.09f + (float)k));
+        }
     }
 
     lv_init();
@@ -129,8 +129,15 @@ int main(void)
     run_ms(400);
     snap("0_start");
 
-    /* Sensor nicht angeschlossen: nur noch MCU-Werte */
-    for (unsigned i = 0; i < NSAMPLES; i++) g_hub[i].dht_ok = 0;
+    /* Sensor 2 nicht angeschlossen */
+    for (unsigned i = 0; i < NSAMPLES; i++) g_hub[i].ok[1] = 0;
+    ui_pages_init(pages, 3, &ui_design);
+    ui_pages_show(1);
+    run_ms(400);
+    snap("2_messwerte_sensor2_fehlt");
+
+    /* beide Sensoren nicht angeschlossen */
+    for (unsigned i = 0; i < NSAMPLES; i++) g_hub[i].ok[0] = 0;
     ui_pages_init(pages, 3, &ui_design);
     ui_pages_show(1);
     run_ms(400);

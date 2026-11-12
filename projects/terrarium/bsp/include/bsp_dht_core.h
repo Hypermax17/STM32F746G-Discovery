@@ -19,9 +19,10 @@
 #define DHT_BIT_THRESHOLD_US  48U     /* High-Zeit darueber = 1, darunter = 0 (Mitte zwischen 26/28 und 70 us) */
 
 typedef struct {
-    int      (*pin)(void);            /* aktueller Pegel der Datenleitung (0/1) */
+    int      (*pin)(void *ctx);       /* aktueller Pegel der Datenleitung (0/1) */
     uint32_t (*cycles)(void);         /* frei laufender Zyklenzaehler */
     uint32_t cycles_per_us;           /* Zaehlerschritte pro Mikrosekunde */
+    void     *ctx;                    /* welcher Sensor / welcher Pin (wird an pin() uebergeben) */
 } dht_io_t;
 
 /* Wartet, bis die Leitung 'level' hat. 0 = ok (elapsed_us = Wartezeit), -1 = Zeitueberschreitung */
@@ -30,7 +31,7 @@ static inline int dht_wait(const dht_io_t *io, int level, uint32_t timeout_us, u
     const uint32_t t0 = io->cycles();
     const uint32_t limit = timeout_us * io->cycles_per_us;
     for (;;) {
-        const int p = io->pin();
+        const int p = io->pin(io->ctx);
         const uint32_t dt = io->cycles() - t0;
         if (p == level) {
             if (elapsed_us != NULL) {

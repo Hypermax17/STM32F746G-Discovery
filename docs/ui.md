@@ -13,7 +13,7 @@ die Seiten der jeweiligen Anwendung in `app/src/pages/`.
 | Widget-Helfer | `ui/src/ui_widgets.c` | Seitengeruest mit Navigation, Karte, Label, Button, Status-Punkt, Tabelle, Diagramm |
 | Seitenverwaltung | `ui/src/ui_pages.c` | mehrere Seiten, Wechsel mit Ueberblendung, periodisches Aktualisieren, Design wechseln |
 | Seiten | `app/src/pages/` | `page_system.c`, `page_values.c`, `page_log.c` |
-| Datenquellen | `app/src/data_hub.c`, `app/src/sysinfo.c`, BSP-Konsole | Messwert-Archiv (MCU, DHT), Systemzustand, Log-Ringpuffer |
+| Datenquellen | `app/src/data_hub.c`, `app/src/sysinfo.c`, BSP-Konsole | Messwert-Archiv (zwei DHT-Sensoren), Systemzustand, Log-Ringpuffer |
 
 Regeln:
 - **LVGL ist nicht thread-sicher.** Alle LVGL-Aufrufe laufen im UI-Task. Andere Tasks melden nur Zustaende
@@ -38,7 +38,7 @@ Umlaute und Sonderzeichen (Grad-Zeichen) fehlen in den eingebauten Schriften; di
 ## Seiten
 
 - **System (Cockpit-Anzeige):** drei runde Anzeigen (CPU-Last, CPU-Temperatur in Grad Celsius, VDDA in Volt), Status der Peripherie (Punkt gruen/rot), Heap und Laufzeit, **Live-Tabelle** der vier aktivsten Tasks (Prioritaet, freier Stack, CPU-Anteil), Test-Ton-Button.
-- **Messwerte (Projekt Terrarium):** drei Cockpit-Anzeigen **MCU** (Chiptemperatur), **Hum** (Luftfeuchte) und **Temp** (Umgebungstemperatur), darunter **Live-Diagramm** (MCU und Temp links in Grad Celsius, Hum rechts in Prozent, automatische Skalierung, 128 Punkte) und **Live-Tabelle** der letzten Werte, Buttons Pause/Loeschen. Die Versorgungsspannung wird hier nicht angezeigt oder aufgezeichnet (sie steht live auf der Seite System). Ohne Sensor zeigen Hum und Temp `--`.
+- **Messwerte (Projekt Terrarium):** vier Cockpit-Kacheln in 2 x 2 Anordnung: **Temp 1**, **Temp 2** (oben) und **Hum 1**, **Hum 2** (unten). Jede Kachel enthaelt die runde Anzeige mit dem aktuellen Wert und ein **Mini-Diagramm** des Verlaufs (60 Messungen) mit Wertebereich. Ist ein Sensor nicht erreichbar, zeigt seine Kachel `--`. Chiptemperatur und VDDA stehen auf der Seite System.
 - **Log:** Meldungen mit Farbe nach Schwere, scrollbar per Wischen, Buttons Pause/Loeschen.
 
 Der Taster B1 (kurzer Druck) blaettert zur naechsten Seite.
