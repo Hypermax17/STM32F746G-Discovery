@@ -106,6 +106,34 @@ lv_obj_t *ui_button(lv_obj_t *parent, const ui_design_t *d, const char *text,
     return b;
 }
 
+lv_obj_t *ui_slider(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y, int32_t w,
+                    int32_t min, int32_t max, uint32_t rgb)
+{
+    lv_obj_t *s = lv_slider_create(parent);
+    lv_obj_remove_style_all(s);
+    lv_obj_set_pos(s, x, y);
+    lv_obj_set_size(s, w, 12);
+    lv_slider_set_range(s, min, max);
+    lv_obj_set_ext_click_area(s, 14);                         /* Treffflaeche groesser als der Balken */
+
+    lv_obj_set_style_radius(s, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(s, ui_col(d->text), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s, LV_OPA_20, LV_PART_MAIN);       /* Schiene: durchscheinend */
+
+    lv_obj_set_style_radius(s, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(s, ui_col(rgb), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_opa(s, LV_OPA_COVER, LV_PART_INDICATOR);
+
+    lv_obj_set_style_radius(s, LV_RADIUS_CIRCLE, LV_PART_KNOB);
+    lv_obj_set_style_bg_color(s, ui_col(d->text), LV_PART_KNOB);
+    lv_obj_set_style_bg_opa(s, LV_OPA_COVER, LV_PART_KNOB);
+    lv_obj_set_style_pad_all(s, 8, LV_PART_KNOB);              /* Griff ca. 28 px */
+    lv_obj_set_style_shadow_width(s, d->shadow_w ? 8 : 0, LV_PART_KNOB);
+    lv_obj_set_style_shadow_opa(s, LV_OPA_40, LV_PART_KNOB);
+    lv_obj_set_style_shadow_color(s, lv_color_black(), LV_PART_KNOB);
+    return s;
+}
+
 /* ---- Tabelle / Diagramm / Rundanzeige --------------------------------------- */
 
 int32_t ui_table_row_h(const ui_design_t *d)

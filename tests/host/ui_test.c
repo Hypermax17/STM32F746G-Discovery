@@ -7,6 +7,7 @@
 #include "app_ui.h"
 #include "data_hub.h"
 #include "bsp_dht.h"
+#include "bsp_ws2812.h"
 #include "sysinfo.h"
 #include "bsp_console.h"
 #include "bsp_lcd.h"
@@ -49,6 +50,15 @@ int bsp_console_read_line(uint32_t serial, char *out, size_t sz, uint16_t *color
     if (strstr(k_log[serial], "Unterbrechung")) *color = BSP_COLOR_YELLOW;
     if (strstr(k_log[serial], "Fehler"))        *color = BSP_COLOR_RED;
     if (strstr(k_log[serial], "Version"))       *color = BSP_COLOR_GRAY;
+    return 0;
+}
+
+/* WS2812-Treiber: Aufrufe mitschreiben */
+static unsigned g_fill_calls;
+static uint8_t g_fill_rgb[3];
+int bsp_ws2812_fill(uint8_t r, uint8_t g, uint8_t b)
+{
+    g_fill_calls++; g_fill_rgb[0] = r; g_fill_rgb[1] = g; g_fill_rgb[2] = b;
     return 0;
 }
 
@@ -111,17 +121,53 @@ int main(void)
     static const ui_page_def_t pages[] = {
         { "System", LV_SYMBOL_SETTINGS, page_system_create, page_system_update },
         { "Messwerte", LV_SYMBOL_CHARGE, page_values_create, page_values_update },
+        { "Dashboard", LV_SYMBOL_EYE_OPEN, page_dashboard_create, page_dashboard_update },
         { "Log", LV_SYMBOL_LIST, page_log_create, page_log_update },
     };
-    static const char *const page_name[] = { "system", "messwerte", "log" };
+    static const char *const page_name[] = { "system", "messwerte", "dashboard", "log" };
 
-    ui_pages_init(pages, 3, &ui_design);
-    for (unsigned p = 0; p < 3; p++) {
+    ui_pages_init(pages, 4, &ui_design);
+    for (unsigned p = 0; p < 4; p++) {
         ui_pages_show(p);
         run_ms(400);
         char name[64];
         snprintf(name, sizeof name, "%u_%s", p + 1, page_name[p]);
         snap(name);
+    }
+
+    /* Dashboard: Schieberegler bedienen -> Farbe geht an den Treiber; Seite neu aufbauen -> Zustand bleibt erhalten */
+    {
+        ui_pages_show(2);
+        run_ms(100);
+        lv_obj_t *sl[3] = {0};
+        unsigned ns = 0;
+        lv_obj_t *stack[512]; unsigned sp = 0;
+        stack[sp++] = lv_screen_active();
+        while (sp) {
+            lv_obj_t *o = stack[--sp];
+            if (lv_obj_check_type(o, &lv_slider_class) && ns < 3) sl[ns++] = o;
+            for (uint32_t i = lv_obj_get_child_count(o); i > 0 && sp < 512; i--) stack[sp++] = lv_obj_get_child(o, (int32_t)i - 1);
+        }
+        if (ns != 3) { printf("FEHLER: %u Schieberegler statt 3\n", ns); return 1; }
+        /* Reihenfolge der Suche ist beliebig: nach y-Position sortieren (R oben) */
+        for (unsigned i = 0; i < 3; i++) for (unsigned j = i + 1; j < 3; j++)
+            if (lv_obj_get_y(sl[j]) < lv_obj_get_y(sl[i])) { lv_obj_t *t = sl[i]; sl[i] = sl[j]; sl[j] = t; }
+        const int32_t v[3] = { 255, 128, 32 };
+        for (unsigned i = 0; i < 3; i++) {
+            lv_slider_set_value(sl[i], v[i], LV_ANIM_OFF);
+            lv_obj_send_event(sl[i], LV_EVENT_VALUE_CHANGED, NULL);
+        }
+        run_ms(100);
+        if (g_fill_calls != 3 || g_fill_rgb[0] != 255 || g_fill_rgb[1] != 128 || g_fill_rgb[2] != 32) {
+            printf("FEHLER: Treiber bekam %u,%u,%u (%u Aufrufe)\n", g_fill_rgb[0], g_fill_rgb[1], g_fill_rgb[2], g_fill_calls);
+            return 1;
+        }
+        snap("3_dashboard_farbe");
+        ui_pages_show(0);
+        ui_pages_show(2);
+        run_ms(100);
+        snap("3_dashboard_nach_neuaufbau");
+        printf("Dashboard: Regler -> Treiber (%u,%u,%u) ok\n", g_fill_rgb[0], g_fill_rgb[1], g_fill_rgb[2]);
     }
 
     /* Auslieferungszustand (wie die Firmware) */
@@ -131,21 +177,21 @@ int main(void)
 
     /* Sensor 2 nicht angeschlossen */
     for (unsigned i = 0; i < NSAMPLES; i++) g_hub[i].ok[1] = 0;
-    ui_pages_init(pages, 3, &ui_design);
+    ui_pages_init(pages, 4, &ui_design);
     ui_pages_show(1);
     run_ms(400);
     snap("2_messwerte_sensor2_fehlt");
 
     /* beide Sensoren nicht angeschlossen */
     for (unsigned i = 0; i < NSAMPLES; i++) g_hub[i].ok[0] = 0;
-    ui_pages_init(pages, 3, &ui_design);
+    ui_pages_init(pages, 4, &ui_design);
     ui_pages_show(1);
     run_ms(400);
     snap("2_messwerte_ohne_sensor");
 
     /* Noch keine Messwerte (direkt nach dem Start) */
     g_count = 0;
-    ui_pages_init(pages, 3, &ui_design);
+    ui_pages_init(pages, 4, &ui_design);
     ui_pages_show(1);
     run_ms(400);
     snap("2_messwerte_leer");

@@ -7,6 +7,7 @@
 #include "app_ui.h"
 #include "ui_port.h"
 #include "bsp.h"
+#include "bsp_ws2812.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -41,6 +42,11 @@ void app_init(void)
     if (xTaskCreate(heartbeat_task, "heartbeat", HEARTBEAT_STACK_WORDS, NULL,
                     HEARTBEAT_PRIORITY, NULL) != pdPASS) {
         bsp_panic("Task 'heartbeat' nicht erzeugt");
+    }
+    if (bsp_ws2812_init() != 0) {
+        BSP_LOGE("WS2812: Init fehlgeschlagen");
+    } else {
+        BSP_LOGI("WS2812: %u LEDs an D3, aus", (unsigned)BSP_WS2812_COUNT);
     }
     data_hub_start();
     audio_task_start();

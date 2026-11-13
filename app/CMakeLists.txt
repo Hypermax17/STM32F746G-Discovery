@@ -15,6 +15,7 @@ add_executable(app
     src/app_ui.c
     src/pages/page_system.c
     src/pages/page_values.c
+    src/pages/page_dashboard.c
     src/pages/page_log.c
     $<TARGET_OBJECTS:stm32_startup>)
 

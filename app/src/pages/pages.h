@@ -11,6 +11,9 @@ void      page_system_update(void);
 lv_obj_t *page_values_create(const ui_design_t *d, unsigned idx);
 void      page_values_update(void);
 
+lv_obj_t *page_dashboard_create(const ui_design_t *d, unsigned idx);
+void      page_dashboard_update(void);
+
 lv_obj_t *page_log_create(const ui_design_t *d, unsigned idx);
 void      page_log_update(void);
 
