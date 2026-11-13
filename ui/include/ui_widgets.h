@@ -33,6 +33,9 @@ lv_obj_t *ui_card(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y, 
 lv_obj_t *ui_label(lv_obj_t *parent, const ui_design_t *d, ui_text_kind_t kind, const char *text);
 lv_obj_t *ui_button(lv_obj_t *parent, const ui_design_t *d, const char *text,
                     int32_t x, int32_t y, int32_t w, int32_t h);
+/* Schieberegler min..max; rgb = Farbe des gefuellten Teils. Grosser Griff (Touch), erweiterte Treffflaeche. */
+lv_obj_t *ui_slider(lv_obj_t *parent, const ui_design_t *d, int32_t x, int32_t y, int32_t w,
+                    int32_t min, int32_t max, uint32_t rgb);
 /* Farbiger Punkt (Status), Durchmesser dia */
 lv_obj_t *ui_dot(lv_obj_t *parent, int32_t x, int32_t y, int32_t dia, uint32_t rgb);
 

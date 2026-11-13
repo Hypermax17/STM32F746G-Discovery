@@ -69,3 +69,39 @@ Die Sensoren werden nacheinander gelesen, nie gleichzeitig.
 
 `tests/host/run.sh` simuliert den Sensor (Einzeldraht-Protokoll mit virtueller Zeit, Zeitjitter, Fehlerfaelle) und prueft
 Erfassung und Umrechnung. Das Zeitverhalten auf echter Hardware (Pin, Pull-up, Leitung) ist damit nicht abgedeckt.
+
+## Beleuchtung mit WS2812 (Modul CJMCU-2812-7, 7 LEDs)
+
+Treiber: `bsp/src/bsp_ws2812.c` (`bsp_ws2812.h`), Kern ohne Hardware: `bsp/include/bsp_ws2812_core.h`.
+Bedienung: Seite **Dashboard** (drei Schieberegler R/G/B fuer das ganze Modul, Farbfeld, Taste "Aus").
+
+### Anschluss
+
+| Modul | Board |
+|---|---|
+| **DIN** (Dateneingang) | **D3 = PB4** (ueber ca. 330 Ohm, siehe unten) |
+| 5V | 5V (Arduino-Anschluss CN4) oder eigenes 5-V-Netzteil |
+| GND | GND (immer mit dem Board verbinden) |
+| DOUT | frei (nur zum Weiterreichen an weitere Module) |
+
+- Der Dateneingang der WS2812 verlangt bei 5 V Versorgung mindestens 0,7 x 5 V = **3,5 V**; der STM32 liefert 3,3 V.
+  Das ist ausserhalb der Spezifikation und funktioniert oft, aber nicht zuverlaessig. Robust: Pegelwandler
+  74AHCT125 (mit 5 V versorgt) zwischen PB4 und DIN. Alternativ eine Schottky-Diode (z. B. 1N5819) in die 5-V-Leitung zum
+  Modul (VDD sinkt auf ca. 4,5 V, Schwelle ca. 3,15 V).
+- Widerstand ca. **330 Ohm** direkt am Modul in die Datenleitung; Elko 100..1000 uF ueber 5V/GND des Moduls.
+- Moduleingang nicht mit 3,3 V am Datenpin betreiben, solange die 5 V fehlen (der Eingang speist sonst ueber die
+  Schutzdiode die LEDs): 5 V zuerst oder gleichzeitig einschalten.
+- Pinzuordnung: D3 = PB4 (TIM3_CH1) laut Zephyr-Boarddoku und ST-Community; der ST-Schaltplan wurde nicht geprueft.
+
+### Funktionsweise
+
+- TIM3 erzeugt im PWM-Modus das 800-kHz-Signal (Periode 1,25 us; 0-Bit 0,4 us, 1-Bit 0,8 us high), die Bitmuster holt
+  **DMA1 Stream 2** (Kanal 5, Update-Anforderung von TIM3) aus einem Puffer im SRAM. Die Uebertragung dauert ca. 0,3 ms
+  und belastet die CPU nicht; Interrupt-Sperren (z. B. DHT-Messung) stoeren sie nicht.
+- Danach bleibt die Leitung als normaler Ausgang auf Low (Reset-Signal, die LEDs uebernehmen die Daten).
+- Helligkeit: Die Kanalwerte werden auf `BSP_WS2812_MAX_LEVEL` = 128 (50 %) skaliert, damit 7 weisse LEDs den
+  USB-Anschluss nicht ueberlasten (bis ca. 420 mA bei voller Leistung). Mit eigenem Netzteil:
+  `-DBSP_WS2812_MAX_LEVEL=255`.
+- Beim Start werden alle LEDs ausgeschaltet; der Reglerzustand geht beim Neustart verloren (alle 0).
+- Fehlersuche: Log-Zeile `WS2812: 7 LEDs an D3, aus` beim Start. Bleibt das Modul dunkel: Versorgung/Masse, DIN statt
+  DOUT, Pegel (Pegelwandler), dann Pin D3. Falsche Farben oder Flackern deuten auf den 3,3-V-Pegel.

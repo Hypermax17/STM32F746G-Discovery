@@ -19,3 +19,7 @@ gcc -std=gnu11 -Wall -Wextra -o "$OUT/unit_test" -I bsp/include tests/host/unit_
 # DHT-Treiberkern (Projekt Terrarium): simulierter Sensor, Erfassung und Umrechnung
 gcc -std=gnu11 -Wall -Wextra -o "$OUT/dht_test" -I projects/terrarium/bsp/include tests/host/dht_test.c
 "$OUT/dht_test"
+
+# WS2812-Treiberkern (Projekt Terrarium): Bitmuster, Zeiten, Skalierung
+gcc -std=gnu11 -Wall -Wextra -o "$OUT/ws2812_test" -I projects/terrarium/bsp/include tests/host/ws2812_test.c
+"$OUT/ws2812_test"
