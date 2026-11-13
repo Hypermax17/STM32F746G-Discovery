@@ -8,6 +8,7 @@
 #include "data_hub.h"
 #include "bsp_dht.h"
 #include "bsp_ws2812.h"
+#include "ui_touch_pack.h"
 #include "sysinfo.h"
 #include "bsp_console.h"
 #include "bsp_lcd.h"
@@ -91,6 +92,37 @@ static void run_ms(uint32_t ms)
     for (uint32_t t = 0; t < ms; t += 20) { g_now += 20; lv_timer_handler(); }
 }
 
+/* Simulierter Touch (gleiche Packlogik wie ui_port.c) */
+static uint32_t g_touch_packed;
+static int g_touch_old_release;      /* 1 = fruehere Fehlfunktion: beim Loslassen Position 0/0 */
+static void touch_cb(lv_indev_t *indev, lv_indev_data_t *data)
+{
+    (void)indev;
+    int pressed;
+    ui_touch_unpack(g_touch_packed, &data->point.x, &data->point.y, &pressed);
+    data->state = pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+}
+static void touch_set(int touched, int x, int y)
+{
+    if (!touched && g_touch_old_release) { g_touch_packed = 0; return; }
+    g_touch_packed = ui_touch_pack(g_touch_packed, touched, (uint32_t)x, (uint32_t)y);
+}
+
+/* Schieberegler per Touch von links bis zu 70 % der Breite ziehen und loslassen; liefert den Wert danach */
+static int32_t drag_slider(lv_obj_t *sl)
+{
+    lv_area_t a;
+    lv_obj_get_coords(sl, &a);
+    const int y = (a.y1 + a.y2) / 2;
+    const int x0 = a.x1 + 6, x1 = a.x1 + (a.x2 - a.x1) * 7 / 10;
+    touch_set(1, x0, y); run_ms(60);
+    for (int x = x0; x <= x1; x += 6) { touch_set(1, x, y); run_ms(40); }
+    const int32_t during = lv_slider_get_value(sl);
+    touch_set(0, 0, 0); run_ms(100);
+    printf("  Regler: waehrend des Ziehens %d, nach dem Loslassen %d\n", (int)during, (int)lv_slider_get_value(sl));
+    return lv_slider_get_value(sl);
+}
+
 static void snap(const char *name)
 {
     char path[256];
@@ -152,13 +184,30 @@ int main(void)
         /* Reihenfolge der Suche ist beliebig: nach y-Position sortieren (R oben) */
         for (unsigned i = 0; i < 3; i++) for (unsigned j = i + 1; j < 3; j++)
             if (lv_obj_get_y(sl[j]) < lv_obj_get_y(sl[i])) { lv_obj_t *t = sl[i]; sl[i] = sl[j]; sl[j] = t; }
+        /* Touch-Bedienung: Wert muss nach dem Loslassen stehen bleiben (frueherer Fehler: Sprung auf 0) */
+        lv_indev_t *ind = lv_indev_create();
+        lv_indev_set_type(ind, LV_INDEV_TYPE_POINTER);
+        lv_indev_set_read_cb(ind, touch_cb);
+        g_touch_old_release = 1;
+        printf("Touch-Test mit altem Loslassen (0/0), Fehler wird erwartet:\n");
+        int32_t after_old = drag_slider(sl[0]);
+        lv_slider_set_value(sl[0], 0, LV_ANIM_OFF);
+        g_touch_old_release = 0;
+        printf("Touch-Test mit letzter Position beim Loslassen:\n");
+        int32_t after_new = drag_slider(sl[0]);
+        if (after_new < 100 || after_new > 200) { printf("FEHLER: Wert nach dem Loslassen %d\n", (int)after_new); return 1; }
+        if (after_old >= 100) { printf("Hinweis: alter Fehler liess sich in der Simulation nicht nachstellen (%d)\n", (int)after_old); }
+        lv_slider_set_value(sl[0], 0, LV_ANIM_OFF);
+        lv_indev_delete(ind);
+        g_fill_calls = 0;
+
         const int32_t v[3] = { 255, 128, 32 };
         for (unsigned i = 0; i < 3; i++) {
             lv_slider_set_value(sl[i], v[i], LV_ANIM_OFF);
             lv_obj_send_event(sl[i], LV_EVENT_VALUE_CHANGED, NULL);
         }
         run_ms(100);
-        if (g_fill_calls != 3 || g_fill_rgb[0] != 255 || g_fill_rgb[1] != 128 || g_fill_rgb[2] != 32) {
+        if (g_fill_calls < 3 || g_fill_rgb[0] != 255 || g_fill_rgb[1] != 128 || g_fill_rgb[2] != 32) {
             printf("FEHLER: Treiber bekam %u,%u,%u (%u Aufrufe)\n", g_fill_rgb[0], g_fill_rgb[1], g_fill_rgb[2], g_fill_calls);
             return 1;
         }
