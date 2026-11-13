@@ -3,6 +3,8 @@
 ## Schichten
 
 ```
+bootloader/  Bootloader (prueft/startet die App, spaeter Netzwerk-Update) -> nutzt das BSP
+common/      Image-Format + CRC32 (Bootloader und App)
 app/   Applikation (FreeRTOS-Tasks, Logik)      -> nutzt nur bsp.h
 bsp/   Treiber je Peripherie (bsp_<name>.c/.h)  -> nutzt HAL + FreeRTOS
 third_party/  HAL, CMSIS, FreeRTOS
@@ -16,7 +18,8 @@ Schlaegt ein Schritt vor der Konsole fehl, zeigt LD1 einen Blinkcode.
 
 | Bereich | Adresse | Nutzung |
 |---|---|---|
-| Flash | `0x08000000`, 1 MB | Programm |
+| Flash | `0x08000000`, 256 KB | Bootloader (Sektor 0..4) |
+| Flash | `0x08040000`, 768 KB | Applikation (Sektor 5..7), Image-Header bei `+0x200` |
 | DTCM | `0x20000000`, 64 KB | Main-Stack (MSP) |
 | SRAM1+2 | `0x20010000`, 256 KB | `.data`/`.bss`, FreeRTOS-Heap (96 KB) |
 | QSPI-Flash | `0x90000000`, 16 MB | Memory-Mapped (nur lesbar), per MPU gesperrt solange das Mapping aus ist |

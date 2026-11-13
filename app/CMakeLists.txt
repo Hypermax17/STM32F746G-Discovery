@@ -1,8 +1,9 @@
 # Applikation: eigentliche Anwendung mit Logik. Hardware-Zugriff nur ueber das BSP.
-set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/linker/STM32F746NGHx_FLASH.ld)
+set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/linker/app.ld)
 
 add_executable(app
     src/main.c
+    src/image_header.c
     src/app.c
     src/app_hooks.c
     src/fault_test.c
@@ -34,16 +35,22 @@ if(APP_FAULT_TEST)
         APP_FAULT_TEST_${_ft}=1
         APP_FAULT_TEST_NAME="${APP_FAULT_TEST}")
 endif()
-target_link_libraries(app PRIVATE ui bsp stm32_hal freertos lvgl m)
+target_link_libraries(app PRIVATE boot_common ui bsp stm32_hal freertos lvgl m)
 target_link_options(app PRIVATE
     -T${LINKER_SCRIPT}
     -Wl,-Map=$<TARGET_FILE_DIR:app>/stm32f746g_app.map
     -Wl,--print-memory-usage)
 set_target_properties(app PROPERTIES LINK_DEPENDS ${LINKER_SCRIPT})
 
-# Binaries fuer STM32CubeProgrammer: .hex und .bin (Startadresse 0x08000000)
+# Image fuer den Bootloader: Rohbinary -> scripts/make_image.py (Groesse + CRC32) -> .bin;
+# die .hex wird daraus erzeugt (Adresse 0x08040000), damit .hex und .bin denselben Inhalt haben.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set(APP_BASE_ADDR 0x08040000)
 add_custom_command(TARGET app POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O ihex   $<TARGET_FILE:app> $<TARGET_FILE_DIR:app>/stm32f746g_app.hex
-    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:app> $<TARGET_FILE_DIR:app>/stm32f746g_app.bin
+    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:app> $<TARGET_FILE_DIR:app>/stm32f746g_app_raw.bin
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/make_image.py
+            $<TARGET_FILE_DIR:app>/stm32f746g_app_raw.bin $<TARGET_FILE_DIR:app>/stm32f746g_app.bin
+    COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex --change-addresses=${APP_BASE_ADDR}
+            $<TARGET_FILE_DIR:app>/stm32f746g_app.bin $<TARGET_FILE_DIR:app>/stm32f746g_app.hex
     COMMAND ${CMAKE_SIZE} $<TARGET_FILE:app>
-    COMMENT "Erzeuge .hex/.bin")
+    COMMENT "Erzeuge Image (.bin) und .hex")

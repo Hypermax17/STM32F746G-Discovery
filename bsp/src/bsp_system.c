@@ -2,6 +2,8 @@
 #include "bsp_sdram.h"
 #include "stm32f7xx_hal.h"
 
+extern const uint32_t g_pfnVectors[];   /* startup_stm32f746xx.s */
+
 static void mpu_config(void)
 {
     HAL_MPU_Disable();
@@ -62,7 +64,7 @@ static void mpu_config(void)
 void bsp_system_init_early(void)
 {
     HAL_Init();
-    SCB->VTOR = FLASH_BASE;          /* Vektortabelle explizit im Flash (nicht ueber den Alias bei 0x0) */
+    SCB->VTOR = (uint32_t)g_pfnVectors;   /* Vektortabelle dieses Programms (Bootloader: 0x08000000, App: 0x08040000) */
     mpu_config();
 
     /* Eigene Fault-Handler (bsp_fault.c) statt HardFault-Eskalation; Division durch 0 trappen */

@@ -28,6 +28,8 @@ if(GIT_FOUND)
 endif()
 
 add_subdirectory(third_party)   # CMSIS, HAL, FreeRTOS, LVGL
+add_subdirectory(common)        # Image-Format und CRC (Bootloader + Applikation)
 add_subdirectory(bsp)           # Board-Support-Package (Treiber)
 add_subdirectory(ui)            # UI-Bibliothek (LVGL-Anbindung, Designs, Seitenverwaltung)
-add_subdirectory(app)           # Applikation
+add_subdirectory(app)           # Applikation (ab 0x08040000)
+add_subdirectory(bootloader)    # Bootloader (ab 0x08000000)

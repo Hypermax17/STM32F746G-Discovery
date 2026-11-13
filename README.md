@@ -25,9 +25,9 @@ cmake --preset release
 cmake --build --preset release
 ```
 
-Ergebnis in `build/release/app/`: `stm32f746g_app.bin`, `.hex`, `.elf`, `.map`.
+Ergebnis in `build/release/app/`: `stm32f746g_app.bin` (Image mit Header + CRC), `.hex`, `.elf`, `.map`; Bootloader in `build/release/bootloader/`.
 Liegt der Compiler nicht im `PATH`, die Umgebungsvariable `ARM_TOOLCHAIN_PATH` auf das `bin`-Verzeichnis setzen.
-Bei jedem Push baut GitHub Actions (`.github/workflows/build.yml`) die Applikation (`scripts/build_variants.sh`) und stellt sie als **ein** Artefakt `stm32f746g-hex` mit der `.hex`-Datei bereit.
+Bei jedem Push baut GitHub Actions (`.github/workflows/build.yml`) die Applikation (`scripts/build_variants.sh`) und stellt sie als **ein** Artefakt `stm32f746g-hex` mit den `.hex`-Dateien von Bootloader und Applikation bereit.
 
 ## Bedienung der Basisapplikation
 

@@ -1,6 +1,6 @@
-/* Linker-Script STM32F746NG (1 MB Flash, 320 KB RAM) + externes SDRAM
+/* Linker-Script der Applikation, STM32F746NG (1 MB Flash, 320 KB RAM) + externes SDRAM
  *
- *  FLASH  0x08000000  1 MB    (AXIM-Interface)
+ *  FLASH  0x08040000  768 KB  (Sektor 5..7; davor liegt der Bootloader, siehe linker/bootloader.ld)
  *  DTCM   0x20000000  64 KB   (Main-Stack / MSP)
  *  RAM    0x20010000  256 KB  (SRAM1 240 KB + SRAM2 16 KB, zusammenhaengend)
  *  SDRAM  0xC0000000  8 MB    (16-bit Bus an 128-Mbit-Chip -> 8 MB nutzbar)
@@ -14,7 +14,7 @@ _Min_Stack_Size = 0x800;   /* Main-Stack (nur bis zum Start des Schedulers/ISRs)
 
 MEMORY
 {
-  FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 1024K
+  FLASH (rx)  : ORIGIN = 0x08040000, LENGTH = 768K
   DTCM  (xrw) : ORIGIN = 0x20000000, LENGTH = 64K
   RAM   (xrw) : ORIGIN = 0x20010000, LENGTH = 256K
   SDRAM_FB (rw) : ORIGIN = 0xC0000000, LENGTH = 512K   /* 2 LCD-Framebuffer a 255 KB (bsp_lcd) */
@@ -24,6 +24,9 @@ MEMORY
 
 _estack = ORIGIN(DTCM) + LENGTH(DTCM);
 
+ASSERT(ORIGIN(FLASH) == 0x08040000, "App muss bei IMAGE_APP_BASE liegen")
+ASSERT(SIZEOF(.isr_vector) <= 0x200, "Vektortabelle ueberschreitet den Image-Header")
+
 SECTIONS
 {
   .isr_vector :
@@ -31,6 +34,12 @@ SECTIONS
     . = ALIGN(4);
     KEEP(*(.isr_vector))
     . = ALIGN(4);
+  } >FLASH
+
+  /* Image-Header (common/include/image.h) an fester Stelle direkt hinter der Vektortabelle */
+  .image_header ORIGIN(FLASH) + 0x200 :
+  {
+    KEEP(*(.image_header))
   } >FLASH
 
   .text :
