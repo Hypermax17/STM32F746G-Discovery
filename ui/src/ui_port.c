@@ -1,4 +1,5 @@
 #include "ui_port.h"
+#include "ui_touch_pack.h"
 #include "ui_pages.h"
 #include "bsp.h"
 
@@ -19,11 +20,8 @@ static volatile uint8_t  s_next_page_request;
 
 void ui_port_touch_update(const bsp_touch_state_t *st)
 {
-    uint32_t v = 0;
-    if (st->count > 0U) {
-        v = 0x80000000UL | ((uint32_t)st->point[0].y << 16) | st->point[0].x;
-    }
-    s_touch_packed = v;
+    s_touch_packed = ui_touch_pack(s_touch_packed, st->count > 0U,
+                                   st->count > 0U ? st->point[0].x : 0U, st->count > 0U ? st->point[0].y : 0U);
 }
 
 void ui_port_request_next_page(void)
@@ -34,10 +32,9 @@ void ui_port_request_next_page(void)
 static void indev_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     (void)indev;
-    const uint32_t v = s_touch_packed;
-    data->point.x = (int32_t)(v & 0x7FFU);
-    data->point.y = (int32_t)((v >> 16) & 0x7FFU);
-    data->state = (v & 0x80000000UL) ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+    int pressed;
+    ui_touch_unpack(s_touch_packed, &data->point.x, &data->point.y, &pressed);
+    data->state = pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
 }
 
 /* ---- Display: DIRECT-Modus mit zwei Vollbild-Puffern, Umschalten im Austastintervall ---------- */
