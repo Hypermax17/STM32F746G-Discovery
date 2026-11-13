@@ -15,6 +15,7 @@
 #define DHT_ERR_TIMEOUT       (-2)    /* Signal bricht mitten im Telegramm ab */
 #define DHT_ERR_CHECKSUM      (-3)
 #define DHT_ERR_RANGE         (-4)    /* Werte ausserhalb des Messbereichs (Stoerung) */
+#define DHT_HELD                1     /* kein Fehler, aber die Messung ist ausgefallen: Rueckgabe ist der letzte gueltige Wert */
 
 #define DHT_BIT_THRESHOLD_US  42U     /* High-Zeit darueber = 1, darunter = 0. Leicht unter der Mitte (26..28 / 70 us), weil ein
                                          langsamer Anstieg der Leitung die gemessene High-Zeit verkuerzt */
@@ -24,21 +25,35 @@ typedef struct {
     uint32_t (*cycles)(void);         /* frei laufender Zyklenzaehler */
     uint32_t cycles_per_us;           /* Zaehlerschritte pro Mikrosekunde */
     void     *ctx;                    /* welcher Sensor / welcher Pin (wird an pin() uebergeben) */
+    uint32_t glitch_us;               /* Entprellung: ein Pegel gilt erst, wenn er so lange stabil bleibt (0 = aus) */
 } dht_io_t;
 
-/* Wartet, bis die Leitung 'level' hat. 0 = ok (elapsed_us = Wartezeit), -1 = Zeitueberschreitung */
+/* Wartet, bis die Leitung 'level' hat. 0 = ok (elapsed_us = Wartezeit), -1 = Zeitueberschreitung.
+ * Kurze Stoerspitzen (Einkopplung auf der offenen, hochohmigen Leitung) werden ausgeblendet: der Pegel muss
+ * glitch_us lang ohne Unterbrechung anliegen. Die Zeit wird bis zur ersten Flanke gemessen, die Entprellung
+ * verschiebt daher Anfang und Ende eines Impulses gleich und verfaelscht keine Impulsdauer. Die echten Impulse
+ * des Sensors sind mindestens ca. 26 us lang. */
 static inline int dht_wait(const dht_io_t *io, int level, uint32_t timeout_us, uint32_t *elapsed_us)
 {
     const uint32_t t0 = io->cycles();
     const uint32_t limit = timeout_us * io->cycles_per_us;
+    const uint32_t confirm = io->glitch_us * io->cycles_per_us;
     for (;;) {
         const int p = io->pin(io->ctx);
-        const uint32_t dt = io->cycles() - t0;
+        const uint32_t now = io->cycles();
+        const uint32_t dt = now - t0;
         if (p == level) {
-            if (elapsed_us != NULL) {
-                *elapsed_us = dt / io->cycles_per_us;
+            int stable = 1;
+            while (stable && (io->cycles() - now) < confirm) {
+                stable = (io->pin(io->ctx) == level);
             }
-            return 0;
+            if (stable) {
+                if (elapsed_us != NULL) {
+                    *elapsed_us = dt / io->cycles_per_us;
+                }
+                return 0;
+            }
+            continue;                         /* Stoerspitze: weiter warten (Zeitlimit bleibt bestehen) */
         }
         if (dt > limit) {
             return -1;
@@ -102,6 +117,36 @@ static inline int dht_decode(const uint8_t b[5], int type, float *temp_c, float 
     *temp_c = t;
     *hum_pct = h;
     return DHT_OK;
+}
+
+/* ---- Letzten Wert halten ------------------------------------------------------------------------------
+ * Faellt eine Messung aus, liefert der Treiber fuer hold Messperioden den letzten gueltigen Wert weiter (Rueckgabe
+ * DHT_HELD), danach den Fehlercode. Eine gueltige Messung beendet das Halten sofort. */
+typedef struct {
+    float    temp_c, hum_pct;     /* letzter gueltiger Wert */
+    int      valid;               /* 1 = es gibt einen gueltigen Wert, der noch gehalten werden darf */
+    unsigned fails;               /* aufeinanderfolgende ausgefallene Messperioden */
+} dht_hold_t;
+
+/* rc = Ergebnis der Messung; *t/*h enthalten bei DHT_OK den neuen Wert. Liefert DHT_OK, DHT_HELD (dann sind *t/*h
+ * der gehaltene Wert) oder rc (Fehler). */
+static inline int dht_hold_update(dht_hold_t *s, int rc, float *t, float *h, unsigned hold)
+{
+    if (rc == DHT_OK) {
+        s->temp_c = *t;
+        s->hum_pct = *h;
+        s->valid = 1;
+        s->fails = 0;
+        return DHT_OK;
+    }
+    s->fails++;
+    if (s->valid && s->fails <= hold) {
+        *t = s->temp_c;
+        *h = s->hum_pct;
+        return DHT_HELD;
+    }
+    s->valid = 0;                 /* zu lange ausgefallen: alten Wert nicht mehr ausgeben */
+    return rc;
 }
 
 #endif

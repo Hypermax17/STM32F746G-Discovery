@@ -1,6 +1,8 @@
 #include "bsp_dht.h"
 #include "stm32f7xx_hal.h"
 
+#include <string.h>
+
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
@@ -23,7 +25,11 @@ static dht_sensor_t s_sensor[BSP_DHT_COUNT] = {
     { GPIOG, GPIO_PIN_6, "D2", 0 },
 };
 
+#define GLITCH_US 1U                        /* Stoerspitzen auf der Leitung unter 1 us ausblenden */
+
 static struct { uint8_t raw[5]; unsigned bits; } s_diag[BSP_DHT_COUNT];
+static dht_hold_t s_hold[BSP_DHT_COUNT];
+static bsp_dht_stats_t s_stats[BSP_DHT_COUNT];
 static SemaphoreHandle_t s_mutex;
 static int s_ready;
 
@@ -77,16 +83,10 @@ const char *bsp_dht_pin_name(unsigned idx)
     return (idx < BSP_DHT_COUNT) ? s_sensor[idx].name : "?";
 }
 
-int bsp_dht_read(unsigned idx, float *temp_c, float *hum_pct)
+/* Eine Einzelmessung (der Aufrufer hat den Mutex). */
+static int measure_once(unsigned idx, float *temp_c, float *hum_pct)
 {
-    if (!s_ready || idx >= BSP_DHT_COUNT) {
-        return DHT_ERR_NO_RESPONSE;
-    }
     dht_sensor_t *sn = &s_sensor[idx];
-    const int sched = (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING);
-    if (sched) {
-        xSemaphoreTake(s_mutex, portMAX_DELAY);
-    }
 
     const uint32_t since = HAL_GetTick() - sn->last_ms;
     if (since < MIN_INTERVAL_MS) {
@@ -97,8 +97,11 @@ int bsp_dht_read(unsigned idx, float *temp_c, float *hum_pct)
     sn->port->BSRR = (uint32_t)sn->pin << 16;
     delay_ms(START_LOW_MS);
 
-    /* Loslassen und Telegramm erfassen; Interrupts mit FreeRTOS-Prioritaet duerfen die Messung nicht stoeren */
-    const dht_io_t io = { io_pin, io_cycles, SystemCoreClock / 1000000U, sn };
+    /* Loslassen und Telegramm erfassen. Loslassen und Erfassen liegen im selben kritischen Abschnitt: Interrupts mit
+     * FreeRTOS-Prioritaet (>= 5, Audio, Taster, LED-DMA) und Task-Wechsel koennen die Messung nicht unterbrechen.
+     * Offen bleibt nur der HAL-Tick (TIM6, Prioritaet 1, ca. 0,5 us je Millisekunde); er verschiebt die Pegelwechsel
+     * um weniger als 1 us, die Bitschwelle liegt bei 42 us. */
+    const dht_io_t io = { io_pin, io_cycles, SystemCoreClock / 1000000U, sn, GLITCH_US };
     uint8_t bytes[5];
     unsigned bits = 0;
     taskENTER_CRITICAL();
@@ -112,17 +115,61 @@ int bsp_dht_read(unsigned idx, float *temp_c, float *hum_pct)
     s_diag[idx].bits = bits;
 
     if (rc == DHT_OK) {
-        float t = 0.0f, h = 0.0f;
-        rc = dht_decode(bytes, BSP_DHT_TYPE, &t, &h);
+        rc = dht_decode(bytes, BSP_DHT_TYPE, temp_c, hum_pct);
+    }
+    return rc;
+}
+
+int bsp_dht_read(unsigned idx, float *temp_c, float *hum_pct)
+{
+    if (!s_ready || idx >= BSP_DHT_COUNT) {
+        return DHT_ERR_NO_RESPONSE;
+    }
+    const int sched = (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING);
+    if (sched) {
+        xSemaphoreTake(s_mutex, portMAX_DELAY);
+    }
+
+    float t = 0.0f, h = 0.0f;
+    int rc = DHT_ERR_NO_RESPONSE;
+    for (int attempt = 0; attempt < BSP_DHT_ATTEMPTS; attempt++) {
+        rc = measure_once(idx, &t, &h);
         if (rc == DHT_OK) {
-            *temp_c = t;
-            *hum_pct = h;
+            break;
         }
+        s_stats[idx].failed_attempts++;
+        s_stats[idx].last_error = rc;
+        /* Kein Sensor angeschlossen (nie eine Antwort): nicht wiederholen. Wenn der Sensor sonst antwortet, kann auch
+         * "keine Antwort" eine Stoerung sein. */
+        if (rc == DHT_ERR_NO_RESPONSE && !s_hold[idx].valid) {
+            break;
+        }
+    }
+
+    rc = dht_hold_update(&s_hold[idx], rc, &t, &h, BSP_DHT_HOLD_READS);
+    s_stats[idx].reads++;
+    if (rc == DHT_HELD) {
+        s_stats[idx].held++;
+    } else if (rc < 0) {
+        s_stats[idx].lost++;
+    }
+    if (rc >= 0) {
+        *temp_c = t;
+        *hum_pct = h;
     }
     if (sched) {
         xSemaphoreGive(s_mutex);
     }
     return rc;
+}
+
+void bsp_dht_stats(unsigned idx, bsp_dht_stats_t *out)
+{
+    if (idx < BSP_DHT_COUNT) {
+        *out = s_stats[idx];
+    } else {
+        memset(out, 0, sizeof *out);
+    }
 }
 
 void bsp_dht_last_diag(unsigned idx, uint8_t raw[5], unsigned *bits_done)

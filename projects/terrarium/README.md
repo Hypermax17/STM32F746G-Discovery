@@ -53,7 +53,40 @@ Hinweise:
   20..90 % rF (+-5 %). Die Chiptemperatur (MCU) ist **nicht** die Umgebungstemperatur.
 - DHT22/AM2302: mit `-DBSP_DHT_TYPE=22` uebersetzen (Aufloesung 0,1; Skala -20..60 Grad Celsius).
 
-Bei Fehlern wird die Messung einmal wiederholt (der Treiber wartet dafuer den Mindestabstand ab); nur ein dauerhafter
+### Ausfallsicherheit (Treiber `bsp_dht`)
+
+- **Wiederholen:** Eine fehlgeschlagene Messung wird bis zu 3 mal versucht (`BSP_DHT_ATTEMPTS`, Mindestabstand 1,1 s). Ein Sensor,
+  der noch nie geantwortet hat (nicht angeschlossen), wird nur einmal abgefragt.
+- **Letzten Wert halten:** Faellt die Messung trotzdem aus, liefert `bsp_dht_read()` fuer 5 weitere Messperioden
+  (`BSP_DHT_HOLD_READS`, bei 2 s Periode 10 s) den letzten gueltigen Wert mit Rueckgabe `DHT_HELD` (= 1); erst danach kommt
+  ein Fehlercode und die Kachel zeigt `--`. Im Log steht `Messung ausgefallen (...), letzter Wert wird gehalten` und beim
+  Ende `wieder gueltig`.
+- **Stoerspitzen ausblenden:** Ein Pegelwechsel auf der Datenleitung gilt erst, wenn der Pegel 1 us lang stabil bleibt. Die
+  Datenleitung ist hochohmig (Pull-up) und faengt Stoerungen leicht ein; die echten Impulse des Sensors dauern mindestens
+  26 us. Im PC-Test mit je vier 0,3-us-Spitzen pro Telegramm sind ohne Filter fast alle Telegramme kaputt, mit Filter keines.
+- **Zeitverhalten:** Loslassen der Leitung und Erfassen laufen in einem kritischen Abschnitt (Interrupts mit
+  FreeRTOS-Prioritaet >= 5 und Task-Wechsel gesperrt). Einzig der HAL-Tick (TIM6, Prioritaet 1, ca. 0,5 us je ms) bleibt
+  aktiv; das verschiebt Flanken um weniger als 1 us (Bitschwelle 42 us). Die Zeit kommt vom Zyklenzaehler DWT, die
+  WS2812-Beleuchtung nutzt TIM3 + DMA1 und andere Pins (PB4): Software-seitig beeinflussen sich beide nicht.
+- **Statistik im Log:** Alle 60 s steht pro Sensor eine Zeile `n Messungen, x Fehlversuche, y gehalten, z ausgefallen`,
+  aber nur wenn etwas auffaellig war. Fehlversuche zaehlen auch dann, wenn die Wiederholung sie verdeckt hat; so laesst sich
+  die Leitungsqualitaet z. B. mit und ohne Beleuchtung vergleichen.
+
+### Wenn die Sensoren bei eingeschalteter Beleuchtung Fehler zeigen (Elektrik)
+
+Die Ursache liegt dann sehr wahrscheinlich in der Einkopplung/Versorgung, nicht in der Software:
+- **Gemeinsamer Masse-/Versorgungspfad:** Der LED-Strom (bis ca. 210 mA bei 50 %) soll nicht ueber dieselbe Masseleitung wie die
+  Sensoren fliessen. Sternfoermig verdrahten: LED-Masse direkt zur Masseklemme der 5-V-Quelle, Sensormasse getrennt zum
+  Board. Test: LEDs aus einem **eigenen 5-V-Netzteil** (nur GND mit dem Board verbunden) - verschwinden die Fehler, ist es
+  die Versorgung.
+- **Pull-up:** Je Datenleitung ein **4,7-kOhm-Widerstand nach 3V3**, nahe am Board. Der interne Pull-up (ca. 40 kOhm) ist
+  hochohmig und anfaellig fuer Einstreuung; der Sensor-Pull-up (Modul) sitzt oft weit weg.
+- **Abblocken:** 100 nF direkt an VCC/GND jedes Sensors, dazu ca. 10 uF pro Sensorstrang.
+- **Leitungsfuehrung:** Sensorleitungen kurz, nicht parallel zur LED-Datenleitung (PB4) oder zur 5-V-Zuleitung; Datenleitung
+  zusammen mit ihrer Masse verdrillen.
+- **LED-Datenleitung:** 330-Ohm-Widerstand am Modul, Pegelwandler (siehe oben) - sie schwingt sonst auf die Nachbarleitungen.
+
+Bei Fehlern wird die Messung wiederholt (der Treiber wartet dafuer den Mindestabstand ab); nur ein dauerhafter
 Fehler erscheint im Log. Ein Fehler mit `[40 Bit: ...]` und falscher Pruefsumme deutet auf Stoerungen oder einen zu
 langsamen Pull-up, ein Abbruch mit wenigen Bits auf die Leitung oder die Versorgung.
 

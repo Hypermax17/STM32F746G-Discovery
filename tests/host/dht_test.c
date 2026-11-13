@@ -33,7 +33,20 @@ static int level_at(const sim_t *s, double t)
 }
 
 /* Jeder Zugriff kostet virtuelle Zeit (entspricht einer Abfrageschleife von ca. 0,1 us) */
-static int      sim_pin(void *ctx)  { g_clock_us += 0.08; return level_at(ctx, g_clock_us - ((sim_t *)ctx)->start_us); }
+/* Stoerspitzen (Einkopplung auf der Leitung): kurze Bereiche, in denen der Pegel kippt */
+static double g_gl_at[16];                         /* Beginn relativ zum Loslassen (us) */
+static int    g_gl_n;
+static double g_gl_len = 0.3;                      /* Dauer (us) */
+static int sim_pin(void *ctx)
+{
+    g_clock_us += 0.08;
+    const double rel = g_clock_us - ((sim_t *)ctx)->start_us;
+    int lvl = level_at(ctx, rel);
+    for (int i = 0; i < g_gl_n; i++) {
+        if (rel >= g_gl_at[i] && rel < g_gl_at[i] + g_gl_len) lvl = !lvl;
+    }
+    return lvl;
+}
 static uint32_t sim_cycles(void)    { g_clock_us += 0.02; return (uint32_t)(g_clock_us * CYC_PER_US); }
 
 static double jitter(double j) { return ((double)rand() / RAND_MAX * 2.0 - 1.0) * j; }
@@ -151,6 +164,73 @@ int main(void)
     CHECK(dht_decode(f, 11, &t, &h) == DHT_ERR_RANGE, "Feuchte > 100 % abgelehnt");
     frame(f, 55, 0, 90, 0);
     CHECK(dht_decode(f, 11, &t, &h) == DHT_ERR_RANGE, "Temperatur > 85 C abgelehnt");
+
+    /* Stoerspitzen: ohne Entprellung gehen Telegramme kaputt, mit 1 us Entprellung nicht */
+    {
+        srand(7);
+        const dht_io_t io_raw  = { sim_pin, sim_cycles, CYC_PER_US, &S1, 0 };
+        const dht_io_t io_filt = { sim_pin, sim_cycles, CYC_PER_US, &S1, 1 };
+        int bad_raw = 0, bad_filt = 0;
+        const int frames = 2000;
+        for (int n = 0; n < frames; n++) {
+            uint8_t fr[5], g2[5];
+            frame(fr, (uint8_t)(30 + n % 60), 0, (uint8_t)(10 + n % 30), 0);
+            g_gl_n = 4;
+            for (int k = 0; k < g_gl_n; k++) g_gl_at[k] = 5.0 + (double)rand() / RAND_MAX * 4300.0;   /* im Telegramm */
+            build_frame(&S1, fr, 30, 3, 40);
+            if (dht_capture(&io_raw, g2, NULL) != DHT_OK || memcmp(fr, g2, 5) != 0) bad_raw++;
+            build_frame(&S1, fr, 30, 3, 40);
+            if (dht_capture(&io_filt, g2, NULL) != DHT_OK || memcmp(fr, g2, 5) != 0) bad_filt++;
+        }
+        g_gl_n = 0;
+        printf("       Stoerspitzen (4 je Telegramm, 0,3 us): ohne Entprellung %d von %d fehlerhaft, mit %d\n",
+               bad_raw, frames, bad_filt);
+        CHECK(bad_raw > 100, "Simulation: Stoerspitzen stoeren ohne Entprellung deutlich");
+        CHECK(bad_filt == 0, "mit Entprellung (1 us) sind alle Telegramme fehlerfrei");
+
+        /* Spitzen duerfen die Messung auch nicht bei der Antwort/zwischen den Impulsen verfaelschen */
+        g_gl_n = 1; g_gl_at[0] = 33.0;      /* mitten in der Pause vor der Antwort */
+        frame(f, 55, 0, 24, 0);
+        build_frame(&S1, f, 30, 0, 40);
+        CHECK(dht_capture(&io_filt, got, NULL) == DHT_OK && memcmp(f, got, 5) == 0, "Spitze in der Antwortpause ausgeblendet");
+        g_gl_n = 0;
+    }
+
+    /* Letzten Wert halten */
+    {
+        dht_hold_t hs = {0};
+        float tt = 0, hh = 0;
+        const unsigned HOLD = 3;
+        tt = 22; hh = 51;
+        CHECK(dht_hold_update(&hs, DHT_ERR_CHECKSUM, &tt, &hh, HOLD) == DHT_ERR_CHECKSUM,
+              "Halten: ohne vorherigen Wert wird der Fehler gemeldet");
+        CHECK(dht_hold_update(&hs, DHT_OK, &tt, &hh, HOLD) == DHT_OK && tt == 22 && hh == 51, "Halten: gueltiger Wert wird durchgereicht");
+        int ok = 1;
+        for (unsigned i = 0; i < HOLD; i++) {
+            tt = 0; hh = 0;
+            ok &= (dht_hold_update(&hs, DHT_ERR_TIMEOUT, &tt, &hh, HOLD) == DHT_HELD && tt == 22 && hh == 51);
+        }
+        CHECK(ok, "Halten: 3 ausgefallene Perioden liefern den letzten Wert (DHT_HELD)");
+        tt = 0; hh = 0;
+        CHECK(dht_hold_update(&hs, DHT_ERR_TIMEOUT, &tt, &hh, HOLD) == DHT_ERR_TIMEOUT, "Halten: danach wird der Fehler gemeldet");
+        CHECK(dht_hold_update(&hs, DHT_ERR_TIMEOUT, &tt, &hh, HOLD) == DHT_ERR_TIMEOUT, "Halten: der alte Wert kommt nicht wieder");
+        tt = 23; hh = 49;
+        CHECK(dht_hold_update(&hs, DHT_OK, &tt, &hh, HOLD) == DHT_OK && hs.fails == 0, "Halten: neuer gueltiger Wert beendet den Ausfall");
+        tt = 0; hh = 0;
+        CHECK(dht_hold_update(&hs, DHT_ERR_CHECKSUM, &tt, &hh, HOLD) == DHT_HELD && tt == 23 && hh == 49,
+              "Halten: nach Erholung liefert der neue Wert");
+        /* Fehler dazwischen zaehlen nicht, wenn zwischendurch eine Messung gelingt */
+        dht_hold_t h2 = {0};
+        tt = 20; hh = 40;
+        dht_hold_update(&h2, DHT_OK, &tt, &hh, HOLD);
+        int never_lost = 1;
+        for (int n = 0; n < 50; n++) {
+            float a = 0, b = 0;
+            if (n % 3 == 2) { a = 20; b = 40; never_lost &= (dht_hold_update(&h2, DHT_OK, &a, &b, HOLD) == DHT_OK); }
+            else            { never_lost &= (dht_hold_update(&h2, DHT_ERR_CHECKSUM, &a, &b, HOLD) == DHT_HELD); }
+        }
+        CHECK(never_lost, "Halten: jede dritte Messung gueltig -> nie ein Fehler nach aussen");
+    }
 
     printf(failures ? "\n%d FEHLER\n" : "\nalle DHT-Tests bestanden\n", failures);
     return failures ? 1 : 0;
